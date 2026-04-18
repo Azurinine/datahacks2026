@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Channel Islands Explorer</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    
+    <div id="instructions">
+      <h1>Channel Islands Explorer</h1>
+      <p>Click to Dive</p>
+      <p style="font-size: 14px; margin-top: 20px;">[ W A S D ] to Swim &nbsp;|&nbsp; [ Mouse ] to Look Around</p>
+    </div>
+
+    <div id="crosshair"></div>
+
+    <div id="pause-indicator">
+      <div class="pause-bar"></div>
+      <div class="pause-bar"></div>
+      <span>FROZEN</span>
+    </div>
+
+    <div id="hud">
+      <div id="year-display">YEAR: <span id="year-value">2014</span></div>
+      <div id="slider-container">
+        <input type="range" id="year-slider" min="2014" max="2026" step="1" value="2014">
+      </div>
+      <div class="hud-stats">
+        <span id="stat-ph">pH: --</span>
+        <span id="stat-temp">Temp: -- °C</span>
+        <span id="stat-vit">Vitality: --</span>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
