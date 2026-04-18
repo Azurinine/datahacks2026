@@ -1,6 +1,9 @@
 import './style.css';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { createAssetRegistry, type AssetRegistry } from './assets';
 
 // ==========================================
@@ -8,10 +11,11 @@ import { createAssetRegistry, type AssetRegistry } from './assets';
 // ==========================================
 const scene = new THREE.Scene();
 
-// Murky deep-sea atmosphere
-const oceanColor = new THREE.Color(0x001628);
-scene.background = oceanColor;
-scene.fog = new THREE.FogExp2(oceanColor, 0.025);
+// Environment Colors: Surface to Deep
+const waterSurfaceColor = new THREE.Color(0x00aaff);
+const waterDeepColor = new THREE.Color(0x000205); 
+scene.background = new THREE.Color(0x000000); // Pitch black beyond the dome boundary
+scene.fog = new THREE.FogExp2(waterSurfaceColor, 0.02);
 
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
 camera.position.set(0, 5, 10);
@@ -21,30 +25,70 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
+// Post-Processing
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+
+const RadialBlurShader = {
+    uniforms: { "tDiffuse": { value: null }, "strength": { value: 0.15 }, "center": { value: new THREE.Vector2(0.5, 0.5) } },
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `
+        uniform sampler2D tDiffuse; uniform float strength; uniform vec2 center; varying vec2 vUv;
+        void main() {
+            vec2 dir = vUv - center; vec4 color = vec4(0.0);
+            float samples[10]; samples[0] = -0.08; samples[1] = -0.05; samples[2] = -0.03; samples[3] = -0.02; samples[4] = -0.01;
+            samples[5] = 0.01; samples[6] = 0.02; samples[7] = 0.03; samples[8] = 0.05; samples[9] = 0.08;
+            for (int i = 0; i < 10; i++) { color += texture2D(tDiffuse, vUv + dir * samples[i] * strength); }
+            gl_FragColor = color / 10.0;
+        }
+    `
+};
+const blurPass = new ShaderPass(RadialBlurShader);
+composer.addPass(blurPass);
+
 // Lighting
-const ambientLight = new THREE.AmbientLight(0x1a4a6e, 0.8);
+const ambientLight = new THREE.AmbientLight(0x1a3a5e, 0.1); 
 scene.add(ambientLight);
 
-const dirLight = new THREE.DirectionalLight(0x88ccff, 0.5);
-dirLight.position.set(10, 50, 20);
-scene.add(dirLight);
+const headlight = new THREE.SpotLight(0xffffff, 500, 80, Math.PI / 6, 0.1, 2);
+headlight.position.set(0, 0, 0);
+camera.add(headlight);
+const headlightTarget = new THREE.Object3D();
+headlightTarget.position.set(0, 0, -10);
+camera.add(headlightTarget);
+headlight.target = headlightTarget;
 
-// ==========================================
-// 2. PLAYER MOVEMENT & GAME-FEEL
-// ==========================================
+const beamGeometry = new THREE.ConeGeometry(6, 60, 32, 1, true);
+beamGeometry.translate(0, -30, 0);
+beamGeometry.rotateX(-Math.PI / 2);
+const beamMaterial = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { color: { value: new THREE.Color(0xffffff) }, opacity: { value: 0.3 } },
+    vertexShader: `varying vec2 vUv; varying float vDepth; void main() { vUv = uv; vec4 mvPosition = modelViewMatrix * vec4(position, 1.0); vDepth = -mvPosition.z; gl_Position = projectionMatrix * mvPosition; }`,
+    fragmentShader: `varying vec2 vUv; varying float vDepth; uniform vec3 color; uniform float opacity; void main() { float radial = 1.0 - smoothstep(0.0, 0.5, length(vUv - 0.5)); float distFade = 1.0 - smoothstep(0.0, 50.0, vDepth); gl_FragColor = vec4(color, radial * distFade * opacity); }`
+});
+const headlightBeam = new THREE.Mesh(beamGeometry, beamMaterial);
+camera.add(headlightBeam);
+scene.add(camera);
+
+// Movement
 const controls = new PointerLockControls(camera, document.body);
-
 const instructions = document.getElementById('instructions')!;
 instructions.addEventListener('click', () => controls.lock());
-controls.addEventListener('lock', () => instructions.style.display = 'none');
-controls.addEventListener('unlock', () => instructions.style.display = 'flex');
-scene.add(controls.object);
+controls.addEventListener('lock', () => instructions.style.opacity = '0');
+controls.addEventListener('unlock', () => instructions.style.opacity = '1');
 
 const moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false };
 const velocity = new THREE.Vector3();
 const direction = new THREE.Vector3();
 let prevTime = performance.now();
 let isPaused = false;
+let headlightOn = true;
+let blurEnabled = true;
+
+const yearSlider = document.getElementById('year-slider') as HTMLInputElement;
+const yearValue = document.getElementById('year-value')!;
+const brightnessSlider = document.getElementById('brightness-slider') as HTMLInputElement;
 
 document.addEventListener('keydown', (event) => {
     switch (event.code) {
@@ -55,11 +99,15 @@ document.addEventListener('keydown', (event) => {
         case 'Space': moveState.up = true; break;
         case 'ShiftLeft':
         case 'ShiftRight': moveState.down = true; break;
-        case 'KeyP': 
-            isPaused = !isPaused;
-            document.getElementById('pause-indicator')!.style.display = isPaused ? 'flex' : 'none';
-            break;
+        case 'KeyF': headlightOn = !headlightOn; headlight.visible = headlightOn; headlightBeam.visible = headlightOn; break;
+        case 'KeyB': blurEnabled = !blurEnabled; blurPass.enabled = blurEnabled; break;
+        case 'KeyP': isPaused = !isPaused; document.getElementById('pause-indicator')!.style.display = isPaused ? 'flex' : 'none'; break;
     }
+    const curYear = parseInt(yearSlider.value);
+    if (event.key === '[' && curYear > 2014) updateYear(curYear - 1);
+    if (event.key === ']' && curYear < 2026) updateYear(curYear + 1);
+    if (event.code === 'KeyJ') updateBrightness(Math.max(0, parseFloat(brightnessSlider.value) - 0.1));
+    if (event.code === 'KeyL') updateBrightness(Math.min(3, parseFloat(brightnessSlider.value) + 0.1));
 });
 
 document.addEventListener('keyup', (event) => {
@@ -74,128 +122,84 @@ document.addEventListener('keyup', (event) => {
     }
 });
 
-// Topography (Seafloor)
+function updateBrightness(val: number) {
+    brightnessSlider.value = val.toFixed(1);
+    headlight.intensity = val * 500; 
+    beamMaterial.uniforms.opacity.value = (val / 3) * 0.4;
+}
+brightnessSlider.addEventListener('input', (e) => updateBrightness(parseFloat((e.target as HTMLInputElement).value)));
+
+// Floor
 const floorGeometry = new THREE.PlaneGeometry(300, 300, 64, 64);
 floorGeometry.rotateX(-Math.PI / 2);
-
-const positionAttribute = floorGeometry.attributes.position;
-for (let i = 0; i < positionAttribute.count; i++) {
-    const x = positionAttribute.getX(i);
-    const z = positionAttribute.getZ(i);
+const posAttr = floorGeometry.attributes.position;
+for (let i = 0; i < posAttr.count; i++) {
+    const x = posAttr.getX(i);
+    const z = posAttr.getZ(i);
     const y = Math.sin(x * 0.05) * 3 + Math.cos(z * 0.05) * 3 - 5; 
-    positionAttribute.setY(i, y);
+    posAttr.setY(i, y);
 }
 floorGeometry.computeVertexNormals();
-
-const floorMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x11221c, 
-    roughness: 0.9,
-    flatShading: true 
-});
+const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x11221c, roughness: 0.9, flatShading: true });
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
 scene.add(floor);
 
-// ==========================================
-// 3. ASSET REGISTRY INTEGRATION
-// ==========================================
-const FISH_COUNT = 200;
+// Assets
+const FISH_COUNT = 800;
 const assets: AssetRegistry = createAssetRegistry(FISH_COUNT);
-
 scene.add(assets.fishMesh);
 scene.add(assets.coralsGroup);
 scene.add(assets.sunRaysGroup);
+scene.add(assets.geographyGroup);
+scene.add(assets.environmentGroup);
 
-// ==========================================
-// 4. UPDATE HOOKS
-// ==========================================
-let currentFishSpeedMultiplier = 1.0; 
+const dyingColor = new THREE.Color(0x445566);
+const tempColor = new THREE.Color();
 
 function updateFish(vitality: number) {
-    currentFishSpeedMultiplier = Math.max(0.1, vitality * 1.5);
-    const healthyColor = new THREE.Color(0x55aaff);
-    const dyingColor = new THREE.Color(0x445566);
-    assets.fishMaterial.color.copy(dyingColor.clone().lerp(healthyColor, vitality));
+    if (assets.fishMesh.instanceColor) {
+        for (let i = 0; i < FISH_COUNT; i++) {
+            tempColor.copy(dyingColor).lerp(assets.fishData[i].originalColor, vitality);
+            assets.fishMesh.setColorAt(i, tempColor);
+        }
+        assets.fishMesh.instanceColor.needsUpdate = true;
+    }
 }
 
-function updateCorals(vitality: number, _acidity: number) {
+function updateYear(year: number) {
+    yearSlider.value = year.toString();
+    yearValue.innerText = year.toString();
+    const yearsPassed = year - 2014;
+    const simulatedPH = 8.1 - (yearsPassed * 0.04); 
+    const simulatedTemp = 10.0 + (yearsPassed * 0.15);
+    applyDataToWorld(simulatedPH, simulatedTemp, 33.5);
+}
+
+function applyDataToWorld(pH: number, temp: number, _salinity: number) {
+    let vitality = Math.max(0, Math.min(1, (pH - 7.6) / 0.5)); 
+    document.getElementById('stat-ph')!.innerText = pH.toFixed(2);
+    document.getElementById('stat-temp')!.innerText = temp.toFixed(1) + " °C";
+    document.getElementById('stat-vit')!.innerText = (vitality*100).toFixed(0) + "%";
+    updateFish(vitality);
     const healthyColor = new THREE.Color(0xff6b81);
     const bleachedColor = new THREE.Color(0xe0e0e0);
     assets.coralMaterial.color.copy(bleachedColor.clone().lerp(healthyColor, vitality));
 }
 
-// ==========================================
-// 5. THE "BRAIN" HOOK (Injection Point)
-// ==========================================
-function applyDataToWorld(pH: number, temp: number, _salinity: number) {
-    // ==========================================
-    // [TEAMMATE INJECTION POINT]
-    // INSERT DATA LOGIC & EQUATIONS HERE
-    // ==========================================
-    
-    // Temporary placeholder logic
-    let vitality = Math.max(0, Math.min(1, (pH - 7.6) / 0.5)); 
-    let acidity = 8.1 - pH; 
-    // ==========================================
-    
-    // Update HUD Stats
-    document.getElementById('stat-ph')!.innerText = `pH: ${pH.toFixed(2)}`;
-    document.getElementById('stat-temp')!.innerText = `Temp: ${temp.toFixed(1)} °C`;
-    document.getElementById('stat-vit')!.innerText = `Vitality: ${(vitality*100).toFixed(0)}%`;
-
-    updateFish(vitality);
-    updateCorals(vitality, acidity);
-}
-
-// ==========================================
-// 6. HUD EVENT LISTENER & SIMULATION
-// ==========================================
-const yearSlider = document.getElementById('year-slider') as HTMLInputElement;
-const yearValue = document.getElementById('year-value')!;
-
-function updateYear(year: number) {
-    yearSlider.value = year.toString();
-    yearValue.innerText = year.toString();
-    
-    const yearsPassed = year - 2014;
-    const simulatedPH = 8.1 - (yearsPassed * 0.04); 
-    const simulatedTemp = 10.0 + (yearsPassed * 0.15);
-    const simulatedSalinity = 33.5;
-    
-    applyDataToWorld(simulatedPH, simulatedTemp, simulatedSalinity);
-}
-
-yearSlider.addEventListener('input', (e) => {
-    const target = e.target as HTMLInputElement;
-    updateYear(parseInt(target.value));
-});
-
-// Keyboard Shortcuts for Year
-document.addEventListener('keydown', (event) => {
-    const currentYear = parseInt(yearSlider.value);
-    if (event.key === '[' && currentYear > 2014) {
-        updateYear(currentYear - 1);
-    } else if (event.key === ']' && currentYear < 2026) {
-        updateYear(currentYear + 1);
-    }
-});
-
-// Initialize
 applyDataToWorld(8.1, 10.0, 33.5);
 
-// ==========================================
-// 7. RENDER LOOP
-// ==========================================
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
 });
 
 const _matrix = new THREE.Matrix4();
 const _position = new THREE.Vector3();
 const _quaternion = new THREE.Quaternion();
 const _scale = new THREE.Vector3(1, 1, 1);
-const _rotation = new THREE.Euler();
+const dummy = new THREE.Object3D();
 
 function animate() {
     requestAnimationFrame(animate);
@@ -203,67 +207,65 @@ function animate() {
     const delta = (time - prevTime) / 1000;
     prevTime = time;
 
-    // Player movement remains active even when simulation is paused
+    const depthLerp = Math.max(0, Math.min(1, (camera.position.y + 5) / -30));
+    const currentWaterColor = waterSurfaceColor.clone().lerp(waterDeepColor, depthLerp);
+    scene.fog.color.copy(currentWaterColor);
+
     if (controls.isLocked === true) {
-        // Fluid drag
         velocity.x -= velocity.x * 5.0 * delta;
         velocity.z -= velocity.z * 5.0 * delta;
         velocity.y -= velocity.y * 5.0 * delta;
-
         direction.z = Number(moveState.forward) - Number(moveState.backward);
         direction.x = Number(moveState.right) - Number(moveState.left);
-        direction.y = Number(moveState.up) - Number(moveState.down); // Vertical swim (Up/Down)
+        direction.y = Number(moveState.up) - Number(moveState.down);
         direction.normalize();
-
         const swimSpeed = 30.0;
         if (moveState.forward || moveState.backward) velocity.z -= direction.z * swimSpeed * delta;
         if (moveState.left || moveState.right) velocity.x -= direction.x * swimSpeed * delta;
         if (moveState.up || moveState.down) velocity.y += direction.y * swimSpeed * delta;
-        
         controls.moveRight(-velocity.x * delta);
         controls.moveForward(-velocity.z * delta);
         controls.object.position.y += velocity.y * delta;
         
         const playerPos = controls.object.position;
         const floorY = Math.sin(playerPos.x * 0.05) * 3 + Math.cos(playerPos.z * 0.05) * 3 - 5;
-        if (playerPos.y < floorY + 2) {
-            playerPos.y = floorY + 2;
-            velocity.y = 0;
+        if (playerPos.y < floorY + 2) { playerPos.y = floorY + 2; velocity.y = 0; }
+        if (playerPos.y > 34) { playerPos.y = 34; velocity.y = 0; }
+        const distFromCenter = Math.sqrt(playerPos.x * playerPos.x + playerPos.z * playerPos.z);
+        if (distFromCenter > 60) {
+            const angle = Math.atan2(playerPos.z, playerPos.x);
+            playerPos.x = Math.cos(angle) * 60;
+            playerPos.z = Math.sin(angle) * 60;
         }
     }
 
-    // Depth-based Sun Ray Fading
-    const depth = Math.max(0, -camera.position.y);
-    const rayOpacity = Math.max(0, 0.15 - (depth * 0.02)); 
-    assets.sunRayMaterial.opacity = rayOpacity;
+    assets.sunRayMaterial.opacity = Math.max(0, 0.15 - depthLerp * 0.15);
 
-    // Fish Swarm Kinetics (Skip if paused)
     if (!isPaused) {
+        const schoolPositions = [
+            new THREE.Vector3(Math.sin(time*0.0005)*25, 12, Math.cos(time*0.0005)*25),
+            new THREE.Vector3(Math.cos(time*0.0004)*20, 8, Math.sin(time*0.0004)*20),
+            new THREE.Vector3(Math.sin(time*0.0006)*30, 15, Math.cos(time*0.0003)*30),
+            new THREE.Vector3(Math.cos(time*0.00055)*22, 10, Math.sin(time*0.00065)*22)
+        ];
+        const playerPos = camera.position;
         for (let i = 0; i < FISH_COUNT; i++) {
             assets.fishMesh.getMatrixAt(i, _matrix);
             _matrix.decompose(_position, _quaternion, _scale);
-            _rotation.setFromQuaternion(_quaternion);
-
-            const speed = assets.fishData[i].baseSpeed * currentFishSpeedMultiplier;
-            
-            _position.z += Math.cos(_rotation.y) * speed;
-            _position.x += Math.sin(_rotation.y) * speed;
-            _rotation.y += assets.fishData[i].turnSpeed;
-
-            const bounds = 80;
-            if (_position.x > bounds) _position.x = -bounds;
-            if (_position.x < -bounds) _position.x = bounds;
-            if (_position.z > bounds) _position.z = -bounds;
-            if (_position.z < -bounds) _position.z = bounds;
-
-            _quaternion.setFromEuler(_rotation);
-            _matrix.compose(_position, _quaternion, _scale);
-            assets.fishMesh.setMatrixAt(i, _matrix);
+            const data = assets.fishData[i];
+            const schoolCenter = schoolPositions[data.schoolId];
+            const targetPos = schoolCenter.clone().add(data.schoolOffset);
+            const distToPlayer = _position.distanceTo(playerPos);
+            if (distToPlayer < 60) {
+                _position.lerp(targetPos, 0.02 * (Math.max(0.1, (parseInt(yearSlider.value)-2014)/12*1.5)));
+                dummy.position.copy(_position);
+                dummy.lookAt(schoolCenter.clone().add(data.schoolOffset).add(new THREE.Vector3(0,0,10)));
+                dummy.updateMatrix();
+                assets.fishMesh.setMatrixAt(i, dummy.matrix);
+            }
         }
         assets.fishMesh.instanceMatrix.needsUpdate = true;
     }
-
-    renderer.render(scene, camera);
+    composer.render();
 }
-
 animate();
