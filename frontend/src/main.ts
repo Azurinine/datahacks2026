@@ -10,11 +10,9 @@ import { createAssetRegistry, type AssetRegistry } from './assets';
 // 1. ENGINE SETUP (Scene, Camera, Renderer)
 // ==========================================
 const scene = new THREE.Scene();
-
-// Environment Colors: Surface to Deep
-const waterSurfaceColor = new THREE.Color(0x00aaff);
-const waterDeepColor = new THREE.Color(0x000205); 
-scene.background = new THREE.Color(0x000000); // Pitch black beyond the dome boundary
+const waterSurfaceColor = new THREE.Color(0x0088dd); // Lighter bluer surface
+const waterDeepColor = new THREE.Color(0x00aaaa);    // Brighter deeper hue
+scene.background = new THREE.Color(0x000000); 
 scene.fog = new THREE.FogExp2(waterSurfaceColor, 0.02);
 
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
@@ -28,7 +26,6 @@ document.body.appendChild(renderer.domElement);
 // Post-Processing
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-
 const RadialBlurShader = {
     uniforms: { "tDiffuse": { value: null }, "strength": { value: 0.15 }, "center": { value: new THREE.Vector2(0.5, 0.5) } },
     vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -49,7 +46,6 @@ composer.addPass(blurPass);
 // Lighting
 const ambientLight = new THREE.AmbientLight(0x1a3a5e, 0.1); 
 scene.add(ambientLight);
-
 const headlight = new THREE.SpotLight(0xffffff, 500, 80, Math.PI / 6, 0.1, 2);
 headlight.position.set(0, 0, 0);
 camera.add(headlight);
@@ -57,7 +53,6 @@ const headlightTarget = new THREE.Object3D();
 headlightTarget.position.set(0, 0, -10);
 camera.add(headlightTarget);
 headlight.target = headlightTarget;
-
 const beamGeometry = new THREE.ConeGeometry(6, 60, 32, 1, true);
 beamGeometry.translate(0, -30, 0);
 beamGeometry.rotateX(-Math.PI / 2);
@@ -77,15 +72,11 @@ const instructions = document.getElementById('instructions')!;
 instructions.addEventListener('click', () => controls.lock());
 controls.addEventListener('lock', () => instructions.style.opacity = '0');
 controls.addEventListener('unlock', () => instructions.style.opacity = '1');
-
 const moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false };
 const velocity = new THREE.Vector3();
 const direction = new THREE.Vector3();
 let prevTime = performance.now();
-let isPaused = false;
-let headlightOn = true;
-let blurEnabled = true;
-
+let isPaused = false, headlightOn = true, blurEnabled = true;
 const yearSlider = document.getElementById('year-slider') as HTMLInputElement;
 const yearValue = document.getElementById('year-value')!;
 const brightnessSlider = document.getElementById('brightness-slider') as HTMLInputElement;
@@ -109,7 +100,6 @@ document.addEventListener('keydown', (event) => {
     if (event.code === 'KeyJ') updateBrightness(Math.max(0, parseFloat(brightnessSlider.value) - 0.1));
     if (event.code === 'KeyL') updateBrightness(Math.min(3, parseFloat(brightnessSlider.value) + 0.1));
 });
-
 document.addEventListener('keyup', (event) => {
     switch (event.code) {
         case 'KeyW': moveState.forward = false; break;
@@ -121,10 +111,9 @@ document.addEventListener('keyup', (event) => {
         case 'ShiftRight': moveState.down = false; break;
     }
 });
-
 function updateBrightness(val: number) {
     brightnessSlider.value = val.toFixed(1);
-    headlight.intensity = val * 500; 
+    headlight.intensity = val * 100; 
     beamMaterial.uniforms.opacity.value = (val / 3) * 0.4;
 }
 brightnessSlider.addEventListener('input', (e) => updateBrightness(parseFloat((e.target as HTMLInputElement).value)));
@@ -134,28 +123,20 @@ const floorGeometry = new THREE.PlaneGeometry(300, 300, 64, 64);
 floorGeometry.rotateX(-Math.PI / 2);
 const posAttr = floorGeometry.attributes.position;
 for (let i = 0; i < posAttr.count; i++) {
-    const x = posAttr.getX(i);
-    const z = posAttr.getZ(i);
+    const x = posAttr.getX(i), z = posAttr.getZ(i);
     const y = Math.sin(x * 0.05) * 3 + Math.cos(z * 0.05) * 3 - 5; 
     posAttr.setY(i, y);
 }
 floorGeometry.computeVertexNormals();
-const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x11221c, roughness: 0.9, flatShading: true });
+const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xc2b280, roughness: 1.0 }); // Sandy floor
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
 scene.add(floor);
 
 // Assets
 const FISH_COUNT = 800;
 const assets: AssetRegistry = createAssetRegistry(FISH_COUNT);
-scene.add(assets.fishMesh);
-scene.add(assets.coralsGroup);
-scene.add(assets.sunRaysGroup);
-scene.add(assets.geographyGroup);
-scene.add(assets.environmentGroup);
-
-const dyingColor = new THREE.Color(0x445566);
-const tempColor = new THREE.Color();
-
+scene.add(assets.fishMesh); scene.add(assets.coralsGroup); scene.add(assets.sunRaysGroup); scene.add(assets.geographyGroup); scene.add(assets.environmentGroup);
+const dyingColor = new THREE.Color(0x445566), tempColor = new THREE.Color();
 function updateFish(vitality: number) {
     if (assets.fishMesh.instanceColor) {
         for (let i = 0; i < FISH_COUNT; i++) {
@@ -165,81 +146,70 @@ function updateFish(vitality: number) {
         assets.fishMesh.instanceColor.needsUpdate = true;
     }
 }
-
 function updateYear(year: number) {
-    yearSlider.value = year.toString();
-    yearValue.innerText = year.toString();
+    yearSlider.value = year.toString(); yearValue.innerText = year.toString();
     const yearsPassed = year - 2014;
-    const simulatedPH = 8.1 - (yearsPassed * 0.04); 
-    const simulatedTemp = 10.0 + (yearsPassed * 0.15);
+    const simulatedPH = 8.1 - (yearsPassed * 0.04), simulatedTemp = 10.0 + (yearsPassed * 0.15);
     applyDataToWorld(simulatedPH, simulatedTemp, 33.5);
 }
-
 function applyDataToWorld(pH: number, temp: number, _salinity: number) {
     let vitality = Math.max(0, Math.min(1, (pH - 7.6) / 0.5)); 
     document.getElementById('stat-ph')!.innerText = pH.toFixed(2);
     document.getElementById('stat-temp')!.innerText = temp.toFixed(1) + " °C";
     document.getElementById('stat-vit')!.innerText = (vitality*100).toFixed(0) + "%";
     updateFish(vitality);
-    const healthyColor = new THREE.Color(0xff6b81);
-    const bleachedColor = new THREE.Color(0xe0e0e0);
+    const healthyColor = new THREE.Color(0xff6b81), bleachedColor = new THREE.Color(0xe0e0e0);
     assets.coralMaterial.color.copy(bleachedColor.clone().lerp(healthyColor, vitality));
 }
-
 applyDataToWorld(8.1, 10.0, 33.5);
 
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
 });
 
-const _matrix = new THREE.Matrix4();
-const _position = new THREE.Vector3();
-const _quaternion = new THREE.Quaternion();
-const _scale = new THREE.Vector3(1, 1, 1);
-const dummy = new THREE.Object3D();
-
+const _matrix = new THREE.Matrix4(), _position = new THREE.Vector3(), _quaternion = new THREE.Quaternion(), _scale = new THREE.Vector3(1, 1, 1), dummy = new THREE.Object3D();
 function animate() {
     requestAnimationFrame(animate);
-    const time = performance.now();
-    const delta = (time - prevTime) / 1000;
+    const time = performance.now(), delta = (time - prevTime) / 1000;
     prevTime = time;
-
-    const depthLerp = Math.max(0, Math.min(1, (camera.position.y + 5) / -30));
+    const currentY = camera.position.y, depthLerp = Math.max(0, Math.min(1, (35 - currentY) / 40));
     const currentWaterColor = waterSurfaceColor.clone().lerp(waterDeepColor, depthLerp);
-    scene.fog.color.copy(currentWaterColor);
+    
+    if (scene.fog instanceof THREE.FogExp2) {
+        scene.fog.color.copy(currentWaterColor);
+        const fogDensity = 0.05 - (1.0 - depthLerp) * 0.04;
+        scene.fog.density = fogDensity;
+    }
+    
+    ambientLight.intensity = 0.1 + depthLerp * 0.2; 
 
     if (controls.isLocked === true) {
-        velocity.x -= velocity.x * 5.0 * delta;
-        velocity.z -= velocity.z * 5.0 * delta;
-        velocity.y -= velocity.y * 5.0 * delta;
-        direction.z = Number(moveState.forward) - Number(moveState.backward);
-        direction.x = Number(moveState.right) - Number(moveState.left);
-        direction.y = Number(moveState.up) - Number(moveState.down);
+        const oldPos = camera.position.clone();
+        velocity.x -= velocity.x * 5.0 * delta; velocity.z -= velocity.z * 5.0 * delta; velocity.y -= velocity.y * 5.0 * delta;
+        direction.z = Number(moveState.forward) - Number(moveState.backward); direction.x = Number(moveState.right) - Number(moveState.left); direction.y = Number(moveState.up) - Number(moveState.down);
         direction.normalize();
         const swimSpeed = 30.0;
         if (moveState.forward || moveState.backward) velocity.z -= direction.z * swimSpeed * delta;
         if (moveState.left || moveState.right) velocity.x -= direction.x * swimSpeed * delta;
         if (moveState.up || moveState.down) velocity.y += direction.y * swimSpeed * delta;
-        controls.moveRight(-velocity.x * delta);
-        controls.moveForward(-velocity.z * delta);
+        controls.moveRight(-velocity.x * delta); controls.moveForward(-velocity.z * delta);
         controls.object.position.y += velocity.y * delta;
-        
         const playerPos = controls.object.position;
+        for (const rock of assets.rockSpheres) {
+            if (playerPos.distanceTo(rock.center) < rock.radius + 1.5) { playerPos.copy(oldPos); velocity.set(0,0,0); break; }
+        }
         const floorY = Math.sin(playerPos.x * 0.05) * 3 + Math.cos(playerPos.z * 0.05) * 3 - 5;
         if (playerPos.y < floorY + 2) { playerPos.y = floorY + 2; velocity.y = 0; }
         if (playerPos.y > 34) { playerPos.y = 34; velocity.y = 0; }
-        const distFromCenter = Math.sqrt(playerPos.x * playerPos.x + playerPos.z * playerPos.z);
-        if (distFromCenter > 60) {
+        if (Math.sqrt(playerPos.x*playerPos.x + playerPos.z*playerPos.z) > 60) {
             const angle = Math.atan2(playerPos.z, playerPos.x);
-            playerPos.x = Math.cos(angle) * 60;
-            playerPos.z = Math.sin(angle) * 60;
+            playerPos.x = Math.cos(angle)*60; playerPos.z = Math.sin(angle)*60;
         }
     }
 
-    assets.sunRayMaterial.opacity = Math.max(0, 0.15 - depthLerp * 0.15);
+    // Sun rays get darker as they go down (depthLerp=1 at bottom)
+    assets.sunRayMaterial.opacity = Math.max(0, 0.04 * (1.0 - depthLerp));
 
     if (!isPaused) {
         const schoolPositions = [
@@ -250,18 +220,12 @@ function animate() {
         ];
         const playerPos = camera.position;
         for (let i = 0; i < FISH_COUNT; i++) {
-            assets.fishMesh.getMatrixAt(i, _matrix);
-            _matrix.decompose(_position, _quaternion, _scale);
-            const data = assets.fishData[i];
-            const schoolCenter = schoolPositions[data.schoolId];
-            const targetPos = schoolCenter.clone().add(data.schoolOffset);
-            const distToPlayer = _position.distanceTo(playerPos);
-            if (distToPlayer < 60) {
+            assets.fishMesh.getMatrixAt(i, _matrix); _matrix.decompose(_position, _quaternion, _scale);
+            const data = assets.fishData[i], schoolCenter = schoolPositions[data.schoolId], targetPos = schoolCenter.clone().add(data.schoolOffset);
+            if (_position.distanceTo(playerPos) < 60) {
                 _position.lerp(targetPos, 0.02 * (Math.max(0.1, (parseInt(yearSlider.value)-2014)/12*1.5)));
-                dummy.position.copy(_position);
-                dummy.lookAt(schoolCenter.clone().add(data.schoolOffset).add(new THREE.Vector3(0,0,10)));
-                dummy.updateMatrix();
-                assets.fishMesh.setMatrixAt(i, dummy.matrix);
+                dummy.position.copy(_position); dummy.lookAt(schoolCenter.clone().add(data.schoolOffset).add(new THREE.Vector3(0,0,10)));
+                dummy.updateMatrix(); assets.fishMesh.setMatrixAt(i, dummy.matrix);
             }
         }
         assets.fishMesh.instanceMatrix.needsUpdate = true;
