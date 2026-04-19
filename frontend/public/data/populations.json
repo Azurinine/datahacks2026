@@ -1,15 +1,184 @@
 [
-  { "year": 2014, "counts": { "chromis": 200, "clownfish": 200, "tang": 200, "anthias": 200 } },
-  { "year": 2015, "counts": { "chromis": 180, "clownfish": 190, "tang": 150, "anthias": 180 } },
-  { "year": 2016, "counts": { "chromis": 150, "clownfish": 170, "tang": 100, "anthias": 150 } },
-  { "year": 2017, "counts": { "chromis": 120, "clownfish": 150, "tang": 80, "anthias": 120 } },
-  { "year": 2018, "counts": { "chromis": 100, "clownfish": 130, "tang": 60, "anthias": 100 } },
-  { "year": 2019, "counts": { "chromis": 80, "clownfish": 110, "tang": 50, "anthias": 80 } },
-  { "year": 2020, "counts": { "chromis": 70, "clownfish": 90, "tang": 40, "anthias": 70 } },
-  { "year": 2021, "counts": { "chromis": 60, "clownfish": 70, "tang": 30, "anthias": 60 } },
-  { "year": 2022, "counts": { "chromis": 50, "clownfish": 50, "tang": 20, "anthias": 50 } },
-  { "year": 2023, "counts": { "chromis": 40, "clownfish": 40, "tang": 15, "anthias": 40 } },
-  { "year": 2024, "counts": { "chromis": 30, "clownfish": 30, "tang": 10, "anthias": 30 } },
-  { "year": 2025, "counts": { "chromis": 20, "clownfish": 20, "tang": 5, "anthias": 20 } },
-  { "year": 2026, "counts": { "chromis": 10, "clownfish": 10, "tang": 2, "anthias": 10 } }
+  {
+    "year": 2014,
+    "counts": {
+      "chromis": 299,
+      "clownfish": 338,
+      "tang": 328,
+      "anthias": 258,
+      "garibaldi": 357,
+      "rockfish": 242,
+      "sheephead": 304,
+      "senorita": 258,
+      "kelpbass": 333
+    }
+  },
+  {
+    "year": 2015,
+    "counts": {
+      "chromis": 312,
+      "clownfish": 308,
+      "tang": 312,
+      "anthias": 252,
+      "garibaldi": 293,
+      "rockfish": 325,
+      "sheephead": 257,
+      "senorita": 296,
+      "kelpbass": 257
+    }
+  },
+  {
+    "year": 2016,
+    "counts": {
+      "chromis": 245,
+      "clownfish": 323,
+      "tang": 323,
+      "anthias": 257,
+      "garibaldi": 267,
+      "rockfish": 250,
+      "sheephead": 266,
+      "senorita": 310,
+      "kelpbass": 225
+    }
+  },
+  {
+    "year": 2017,
+    "counts": {
+      "chromis": 235,
+      "clownfish": 301,
+      "tang": 231,
+      "anthias": 305,
+      "garibaldi": 263,
+      "rockfish": 235,
+      "sheephead": 269,
+      "senorita": 305,
+      "kelpbass": 230
+    }
+  },
+  {
+    "year": 2018,
+    "counts": {
+      "chromis": 272,
+      "clownfish": 266,
+      "tang": 253,
+      "anthias": 270,
+      "garibaldi": 235,
+      "rockfish": 285,
+      "sheephead": 223,
+      "senorita": 256,
+      "kelpbass": 233
+    }
+  },
+  {
+    "year": 2019,
+    "counts": {
+      "chromis": 204,
+      "clownfish": 227,
+      "tang": 265,
+      "anthias": 200,
+      "garibaldi": 229,
+      "rockfish": 248,
+      "sheephead": 246,
+      "senorita": 238,
+      "kelpbass": 247
+    }
+  },
+  {
+    "year": 2020,
+    "counts": {
+      "chromis": 230,
+      "clownfish": 243,
+      "tang": 186,
+      "anthias": 243,
+      "garibaldi": 172,
+      "rockfish": 202,
+      "sheephead": 200,
+      "senorita": 212,
+      "kelpbass": 229
+    }
+  },
+  {
+    "year": 2021,
+    "counts": {
+      "chromis": 209,
+      "clownfish": 160,
+      "tang": 228,
+      "anthias": 229,
+      "garibaldi": 165,
+      "rockfish": 175,
+      "sheephead": 228,
+      "senorita": 192,
+      "kelpbass": 174
+    }
+  },
+  {
+    "year": 2022,
+    "counts": {
+      "chromis": 185,
+      "clownfish": 201,
+      "tang": 178,
+      "anthias": 201,
+      "garibaldi": 183,
+      "rockfish": 171,
+      "sheephead": 190,
+      "senorita": 212,
+      "kelpbass": 198
+    }
+  },
+  {
+    "year": 2023,
+    "counts": {
+      "chromis": 170,
+      "clownfish": 139,
+      "tang": 139,
+      "anthias": 180,
+      "garibaldi": 184,
+      "rockfish": 161,
+      "sheephead": 152,
+      "senorita": 182,
+      "kelpbass": 166
+    }
+  },
+  {
+    "year": 2024,
+    "counts": {
+      "chromis": 145,
+      "clownfish": 137,
+      "tang": 139,
+      "anthias": 159,
+      "garibaldi": 178,
+      "rockfish": 129,
+      "sheephead": 168,
+      "senorita": 131,
+      "kelpbass": 127
+    }
+  },
+  {
+    "year": 2025,
+    "counts": {
+      "chromis": 115,
+      "clownfish": 108,
+      "tang": 123,
+      "anthias": 148,
+      "garibaldi": 135,
+      "rockfish": 150,
+      "sheephead": 126,
+      "senorita": 158,
+      "kelpbass": 113
+    }
+  },
+  {
+    "year": 2026,
+    "counts": {
+      "chromis": 115,
+      "clownfish": 139,
+      "tang": 118,
+      "anthias": 121,
+      "garibaldi": 124,
+      "rockfish": 136,
+      "sheephead": 107,
+      "senorita": 140,
+      "kelpbass": 133
+    }
+  }
 ]

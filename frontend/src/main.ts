@@ -87,7 +87,6 @@ const yearValue = document.getElementById('year-value')!;
 const brightnessSlider = document.getElementById('brightness-slider') as HTMLInputElement;
 
 let populations: PopulationYear[] = [];
-const speciesOffset: { [id: string]: number } = { 'chromis': 0, 'clownfish': 200, 'tang': 400, 'anthias': 600 };
 
 document.addEventListener('keydown', (event) => {
     switch (event.code) {
@@ -144,12 +143,25 @@ scene.add(floor);
 
 // Assets
 const fishConfigs = [
-    { id: 'chromis', color: 0x55aaff, count: 200, speedMultiplier: 1.0, scale: 1.0, preferredHeight: 3.0 },
-    { id: 'clownfish', color: 0xffaa55, count: 200, speedMultiplier: 1.2, scale: 0.8, preferredHeight: 2.0 },
-    { id: 'tang', color: 0x55ffaa, count: 200, speedMultiplier: 0.8, scale: 1.2, preferredHeight: 4.0 },
-    { id: 'anthias', color: 0xff55aa, count: 200, speedMultiplier: 1.5, scale: 0.9, preferredHeight: 2.5 },
+    { id: 'chromis', color: 0x55aaff, count: 300, speedMultiplier: 1.0, scale: 1.0, preferredHeight: 3.0 },
+    { id: 'clownfish', color: 0xffaa55, count: 300, speedMultiplier: 1.2, scale: 0.8, preferredHeight: 2.0 },
+    { id: 'tang', color: 0x55ffaa, count: 300, speedMultiplier: 0.8, scale: 1.2, preferredHeight: 4.0 },
+    { id: 'anthias', color: 0xff55aa, count: 300, speedMultiplier: 1.5, scale: 0.9, preferredHeight: 2.5 },
+    { id: 'garibaldi', color: 0xffa500, count: 300, speedMultiplier: 1.1, scale: 1.3, preferredHeight: 3.5 },
+    { id: 'rockfish', color: 0xff4500, count: 300, speedMultiplier: 0.7, scale: 1.1, preferredHeight: 1.5 },
+    { id: 'sheephead', color: 0x8b0000, count: 300, speedMultiplier: 0.9, scale: 1.5, preferredHeight: 2.0 },
+    { id: 'senorita', color: 0xffff00, count: 300, speedMultiplier: 1.3, scale: 0.7, preferredHeight: 4.5 },
+    { id: 'kelpbass', color: 0x556b2f, count: 300, speedMultiplier: 1.0, scale: 1.2, preferredHeight: 2.5 },
 ];
 const FISH_COUNT = fishConfigs.reduce((s, c) => s + c.count, 0);
+
+const speciesOffset: { [id: string]: number } = {};
+let currentOffset = 0;
+fishConfigs.forEach(cfg => {
+    speciesOffset[cfg.id] = currentOffset;
+    currentOffset += cfg.count;
+});
+
 const assets: AssetRegistry = createAssetRegistry(fishConfigs);
 scene.add(assets.fishMesh); scene.add(assets.coralsGroup); scene.add(assets.sunRaysGroup); scene.add(assets.geographyGroup); scene.add(assets.environmentGroup); scene.add(assets.seaweedsGroup);
 
@@ -185,8 +197,9 @@ function syncPopulations(year: number) {
     Object.keys(data.counts).forEach(speciesId => {
         const targetCount = data.counts[speciesId];
         const offset = speciesOffset[speciesId];
+        const speciesCapacity = fishConfigs.find(c => c.id === speciesId)?.count || 0;
         
-        for (let i = 0; i < 200; i++) {
+        for (let i = 0; i < speciesCapacity; i++) {
             const globalIdx = offset + i;
             const fish = assets.fishData[globalIdx];
             fish.scale = i < targetCount ? 1.0 : 0;
@@ -264,7 +277,12 @@ function animate() {
         const playerPos = camera.position;
         for (let i = 0; i < FISH_COUNT; i++) {
             assets.fishMesh.getMatrixAt(i, _matrix); _matrix.decompose(_position, _quaternion, _scale);
-            const data = assets.fishData[i], schoolCenter = schoolPositions[data.schoolId], targetPos = schoolCenter.clone().add(data.schoolOffset);
+            const data = assets.fishData[i];
+            const schoolCenter = schoolPositions[data.schoolId % schoolPositions.length];
+            
+            if (!schoolCenter) continue; // Safety check
+
+            const targetPos = schoolCenter.clone().add(data.schoolOffset);
             
             if (_position.distanceTo(playerPos) > 70) {
                 const angle = Math.random() * Math.PI * 2;
