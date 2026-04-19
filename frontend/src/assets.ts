@@ -21,6 +21,8 @@ export interface AssetRegistry {
         originalColor: THREE.Color;
         schoolOffset: THREE.Vector3;
         schoolId: number;
+        scale: number;
+        baseScale: number;
     }[];
     rockSpheres: { center: THREE.Vector3, radius: number }[];
     fishMaterial: THREE.MeshStandardMaterial;
@@ -40,6 +42,7 @@ export function createAssetRegistry(configs: FishConfig[]): AssetRegistry {
     fishGeometry.rotateX(Math.PI / 2); 
     const fishMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
     const fishMesh = new THREE.InstancedMesh(fishGeometry, fishMaterial, totalFishCount);
+    fishMesh.frustumCulled = false;
     
     const colorArray = new Float32Array(totalFishCount * 3);
     const instColor = new THREE.Color();
@@ -57,7 +60,7 @@ export function createAssetRegistry(configs: FishConfig[]): AssetRegistry {
             const center = schoolCenters[schoolId].pos;
             const offset = new THREE.Vector3((Math.random()-0.5)*10, (Math.random()-0.5)*2, (Math.random()-0.5)*10);
             dummy.position.copy(center).add(offset);
-            dummy.scale.setScalar(cfg.scale);
+            dummy.scale.setScalar(cfg.scale); // Visible initially
             dummy.updateMatrix();
             fishMesh.setMatrixAt(globalIdx, dummy.matrix);
             fishData.push({
@@ -66,7 +69,9 @@ export function createAssetRegistry(configs: FishConfig[]): AssetRegistry {
                 preferredHeight: cfg.preferredHeight + offset.y,
                 originalColor: new THREE.Color(cfg.color), 
                 schoolOffset: offset, 
-                schoolId: schoolId
+                schoolId: schoolId,
+                scale: 1.0, // Initialize visible
+                baseScale: cfg.scale
             });
             globalIdx++;
         }

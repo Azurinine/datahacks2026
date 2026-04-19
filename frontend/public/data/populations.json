@@ -1,0 +1,15 @@
+[
+  { "year": 2014, "counts": { "chromis": 200, "clownfish": 200, "tang": 200, "anthias": 200 } },
+  { "year": 2015, "counts": { "chromis": 180, "clownfish": 190, "tang": 150, "anthias": 180 } },
+  { "year": 2016, "counts": { "chromis": 150, "clownfish": 170, "tang": 100, "anthias": 150 } },
+  { "year": 2017, "counts": { "chromis": 120, "clownfish": 150, "tang": 80, "anthias": 120 } },
+  { "year": 2018, "counts": { "chromis": 100, "clownfish": 130, "tang": 60, "anthias": 100 } },
+  { "year": 2019, "counts": { "chromis": 80, "clownfish": 110, "tang": 50, "anthias": 80 } },
+  { "year": 2020, "counts": { "chromis": 70, "clownfish": 90, "tang": 40, "anthias": 70 } },
+  { "year": 2021, "counts": { "chromis": 60, "clownfish": 70, "tang": 30, "anthias": 60 } },
+  { "year": 2022, "counts": { "chromis": 50, "clownfish": 50, "tang": 20, "anthias": 50 } },
+  { "year": 2023, "counts": { "chromis": 40, "clownfish": 40, "tang": 15, "anthias": 40 } },
+  { "year": 2024, "counts": { "chromis": 30, "clownfish": 30, "tang": 10, "anthias": 30 } },
+  { "year": 2025, "counts": { "chromis": 20, "clownfish": 20, "tang": 5, "anthias": 20 } },
+  { "year": 2026, "counts": { "chromis": 10, "clownfish": 10, "tang": 2, "anthias": 10 } }
+]
