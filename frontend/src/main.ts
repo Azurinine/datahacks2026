@@ -107,6 +107,13 @@ const bingoTrigger = document.getElementById('bingo-trigger')!;
 const notifNewEl = document.getElementById('notif-new')!;
 const notifWarningEl = document.getElementById('notif-warning')!;
 const notifCriticalEl = document.getElementById('notif-critical')!;
+const infoPopupEl = document.getElementById('info-popup')!;
+const infoPopupClose = document.getElementById('info-popup-close')!;
+const infoPopupBody = document.getElementById('info-popup-body')!;
+const infoPopupYear = document.getElementById('info-popup-year')!;
+const infoOverlay = document.getElementById('info-overlay')!;
+const notifInfoDot = document.getElementById('notif-info-dot')!;
+const infoTrigger = document.getElementById('info-trigger')!;
 
 // System State
 let isPaused = false;
@@ -178,6 +185,63 @@ function closeFishPopup() {
     isPaused = false;
     pauseIndicator.style.display = 'none';
     controls.lock(); // Re-lock immediately
+}
+
+function openInfoPopup() {
+    if (performance.now() - lastUIActionTime < UI_COOLDOWN) return;
+    lastUIActionTime = performance.now();
+
+    const yearWarnings = warnings.filter(w => w.year === currentYear);
+    const criticals = yearWarnings.filter(w => w.message.includes('CRITICAL') || w.message.includes('FAILURE'));
+    const criticalSet = new Set(criticals);
+    const warns = yearWarnings.filter(w => !criticalSet.has(w) && w.message.includes('WARNING'));
+    const alerts = yearWarnings.filter(w => !criticalSet.has(w) && !w.message.includes('WARNING'));
+
+    infoPopupYear.innerText = currentYear.toString();
+    infoPopupBody.innerHTML = '';
+
+    if (yearWarnings.length === 0) {
+        infoPopupBody.innerHTML = '<div class="log-empty">NO ANOMALIES DETECTED THIS YEAR.</div>';
+    } else {
+        const sections: [string, typeof yearWarnings, string][] = [
+            ['ALERT', alerts, 'alert'],
+            ['WARNING', warns, 'warning'],
+            ['CRITICAL', criticals, 'critical'],
+        ];
+        for (const [label, entries, cls] of sections) {
+            if (entries.length === 0) continue;
+            const section = document.createElement('div');
+            section.className = `log-section log-section-${cls}`;
+            const sectionLabel = document.createElement('div');
+            sectionLabel.className = 'log-section-label';
+            sectionLabel.innerText = label;
+            section.appendChild(sectionLabel);
+            entries.forEach(w => {
+                const entry = document.createElement('div');
+                entry.className = `log-entry log-${cls}`;
+                entry.innerText = w.message;
+                section.appendChild(entry);
+            });
+            infoPopupBody.appendChild(section);
+        }
+    }
+
+    notifInfoDot.style.display = 'none';
+    infoOverlay.style.display = 'block';
+    infoPopupEl.style.display = 'block';
+    isPaused = true;
+    pauseIndicator.style.display = 'flex';
+    isInternalUnlock = true;
+    Object.keys(moveState).forEach(k => (moveState as any)[k] = false);
+    controls.unlock();
+}
+
+function closeInfoPopup() {
+    infoPopupEl.style.display = 'none';
+    infoOverlay.style.display = 'none';
+    isPaused = false;
+    pauseIndicator.style.display = 'none';
+    controls.lock();
 }
 
 function showPopup(id: string, title: string, desc: string) {
@@ -342,10 +406,13 @@ function renderBingoBook() {
 
 function renderMissionChart(speciesId: string | 'total', title: string, color: string) {
     if (missionChart) missionChart.destroy();
-    
+
+    // Clear any leftover alert panel from a previous chart render
+    document.getElementById('chart-alert-panel')?.remove();
+
     const years = populations.map(p => p.year);
     let data: number[] = [];
-    
+
     if (speciesId === 'total') {
         const totalPopulations = populations.map(p => Object.values(p.counts).reduce((a, b) => a + b, 0));
         const initialTotal = totalPopulations[0] || 1;
@@ -357,50 +424,128 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
     }
 
     activeSpeciesTitle.innerText = `${title.toUpperCase()} TREND (2014-2026)`;
-    
-    // Find discovery point for this species if it exists
+
     const discovery = discoveryLog.find(d => d.id === speciesId);
-    
-    const ctx = (document.getElementById('population-chart') as HTMLCanvasElement).getContext('2d')!;
+
+    // Only ALERT messages (not WARNING or CRITICAL)
+    const alertsByYear = new Map<number, string[]>();
+    warnings.forEach(w => {
+        if (!w.message.startsWith('ALERT')) return;
+        if (!alertsByYear.has(w.year)) alertsByYear.set(w.year, []);
+        alertsByYear.get(w.year)!.push(w.message);
+    });
+
+    const eventData: (number | null)[] = years.map((y, i) => alertsByYear.has(y) ? data[i] : null);
+    const eventRadii = years.map(y => alertsByYear.has(y) ? 7 : 0);
+
+    const crosshairPlugin = { id: 'crosshair' };
+
+    const canvas = document.getElementById('population-chart') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
     missionChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: years,
-            datasets: [{
-                label: title,
-                data: data,
-                borderColor: color,
-                backgroundColor: color.replace(')', ', 0.1)').replace('rgb', 'rgba'),
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4,
-                pointRadius: years.map(y => discovery && y === discovery.year ? 8 : 0),
-                pointBackgroundColor: '#fff',
-                pointBorderColor: color,
-                pointBorderWidth: 3
-            }]
+            datasets: [
+                {
+                    label: title,
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: color.replace(')', ', 0.1)').replace('rgb', 'rgba'),
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: years.map(y => discovery && y === discovery.year ? 8 : 0),
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: color,
+                    pointBorderWidth: 3,
+                    order: 2,
+                },
+                {
+                    label: 'Alerts',
+                    data: eventData,
+                    showLine: false,
+                    pointRadius: eventRadii,
+                    pointHoverRadius: years.map(y => alertsByYear.has(y) ? 9 : 0),
+                    pointBackgroundColor: 'transparent',
+                    pointHoverBackgroundColor: '#ff4444',
+                    pointBorderColor: '#ff4444',
+                    pointHoverBorderColor: '#ff4444',
+                    pointBorderWidth: 2,
+                    order: 1,
+                } as any,
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                y: { 
+                y: {
                     title: { display: true, text: '% OF 2014 POPULATION', color: '#88bbcc', font: { family: 'Share Tech Mono', size: 10 } },
-                    beginAtZero: true, 
+                    beginAtZero: true,
                     max: 120,
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
-                    ticks: { color: '#88bbcc', font: { family: 'Share Tech Mono' } } 
+                    grid: {
+                        color: (ctx: any) => ctx.tick.value === 25 ? 'rgba(255, 68, 68, 0.35)' : 'rgba(255, 255, 255, 0.05)',
+                        lineWidth: (ctx: any) => ctx.tick.value === 25 ? 1.5 : 1,
+                    },
+                    ticks: {
+                        color: (ctx: any) => ctx.tick.value === 25 ? '#ff8888' : '#88bbcc',
+                        font: { family: 'Share Tech Mono' }
+                    }
                 },
-                x: { 
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
-                    ticks: { color: '#88bbcc', font: { family: 'Share Tech Mono' } } 
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#88bbcc', font: { family: 'Share Tech Mono' } }
                 }
             },
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: { enabled: false }
             }
-        }
+        },
+        plugins: [crosshairPlugin]
     });
+
+    // Floating alert panel — created inside .chart-container so absolute coords align
+    const container = canvas.parentElement!;
+    const alertPanel = document.createElement('div');
+    alertPanel.id = 'chart-alert-panel';
+    alertPanel.className = 'chart-alert-panel';
+    container.appendChild(alertPanel);
+
+    // Pointer cursor when hovering an alert circle
+    canvas.onmousemove = (e: MouseEvent) => {
+        const points = missionChart!.getElementsAtEventForMode(e, 'point', { intersect: true }, true);
+        canvas.style.cursor = points.some(p => (p as any).datasetIndex === 1) ? 'pointer' : 'default';
+    };
+
+    // Click opens alert panel at the circle's position
+    canvas.onclick = (e: MouseEvent) => {
+        const points = missionChart!.getElementsAtEventForMode(e, 'point', { intersect: true }, true);
+        const hit = points.find(p => (p as any).datasetIndex === 1);
+        if (!hit) {
+            alertPanel.style.display = 'none';
+            return;
+        }
+        const year = years[(hit as any).index];
+        const msgs = alertsByYear.get(year);
+        if (!msgs?.length) return;
+
+        const el = (hit as any).element;
+        alertPanel.innerHTML = `
+            <div class="chart-alert-close">×</div>
+            <div class="chart-alert-year">YEAR ${year}</div>
+            ${msgs.map((m: string) => `<div class="chart-alert-msg">${m}</div>`).join('')}
+        `;
+        alertPanel.style.left = `${el.x}px`;
+        alertPanel.style.top = `${el.y}px`;
+        alertPanel.style.display = 'block';
+
+        alertPanel.querySelector('.chart-alert-close')!.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            alertPanel.style.display = 'none';
+        });
+    };
 }
 
 function showEndgameStats() {
@@ -583,6 +728,9 @@ function updateYear(year: number) {
     applyDataToWorld(pH, temp);
     syncPopulations(year);
 
+    // Update info-dot signifier
+    notifInfoDot.style.display = warnings.some(w => w.year === year) ? 'block' : 'none';
+
     // Narrative Warnings
     const currentYearWarnings = warnings.filter(w => w.year === year);
     currentYearWarnings.forEach((warning, idx) => {
@@ -654,6 +802,11 @@ controls.addEventListener('unlock', () => {
     }
 
     // 1. If a submenu was open, just hide it (user pressed Esc to leave)
+    if (infoPopupEl.style.display === 'block') {
+        closeInfoPopup();
+        return;
+    }
+
     if (fishPopup.style.display === 'block') {
         fishPopup.style.display = 'none';
         isPaused = false;
@@ -686,6 +839,16 @@ document.addEventListener('keydown', (event) => {
         event.preventDefault();
         if (event.repeat) return;
         toggleBingoBook();
+        return;
+    }
+    if (event.code === 'KeyI') {
+        event.preventDefault();
+        if (event.repeat) return;
+        if (infoPopupEl.style.display === 'block') {
+            closeInfoPopup();
+        } else {
+            openInfoPopup();
+        }
         return;
     }
     // Remove manual Escape handling entirely - rely on 'unlock' listener
@@ -737,6 +900,10 @@ document.addEventListener('keyup', (event) => {
 
 yearSlider.addEventListener('click', (e) => e.stopPropagation());
 yearSlider.addEventListener('input', (e) => updateYear(parseInt((e.target as HTMLInputElement).value)));
+infoPopupClose.addEventListener('click', (e) => { e.stopPropagation(); closeInfoPopup(); });
+infoPopupEl.addEventListener('click', (e) => e.stopPropagation());
+infoOverlay.addEventListener('click', () => closeInfoPopup());
+infoTrigger.addEventListener('click', (e) => { e.stopPropagation(); openInfoPopup(); });
 popupClose.addEventListener('click', (e) => { e.stopPropagation(); closeFishPopup(); });
 fishPopup.addEventListener('click', (e) => e.stopPropagation());
 bingoTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleBingoBook(); });
