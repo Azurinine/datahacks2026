@@ -1,11 +1,302 @@
 [
-  { "id": "chromis", "name": "Blue Chromis", "color": "#55aaff", "count": 300, "speedMultiplier": 1.0, "scale": 1.0, "preferredHeight": 3.0, "desc": "Small, schooling damselfish often found hovering above coral heads." },
-  { "id": "clownfish", "name": "Clownfish", "color": "#ffaa55", "count": 300, "speedMultiplier": 1.2, "scale": 0.8, "preferredHeight": 2.0, "desc": "Famous for their symbiotic relationship with sea anemones." },
-  { "id": "tang", "name": "Yellow Tang", "color": "#55ffaa", "count": 300, "speedMultiplier": 0.8, "scale": 1.2, "preferredHeight": 4.0, "desc": "Known for their vibrant colors and sharp spines near the tail." },
-  { "id": "anthias", "name": "Sea Anthias", "color": "#ff55aa", "count": 300, "speedMultiplier": 1.5, "scale": 0.9, "preferredHeight": 2.5, "desc": "Brightly colored reef fish that form large, beautiful schools." },
-  { "id": "garibaldi", "name": "Garibaldi", "color": "#ffa500", "count": 300, "speedMultiplier": 1.1, "scale": 1.3, "preferredHeight": 3.5, "desc": "California state marine fish, highly territorial and bright orange." },
-  { "id": "rockfish", "name": "Pacific Rockfish", "color": "#ff4500", "count": 300, "speedMultiplier": 0.7, "scale": 1.1, "preferredHeight": 1.5, "desc": "Long-lived fish that blend into the rocky crevices of the reef." },
-  { "id": "sheephead", "name": "California Sheephead", "color": "#8b0000", "count": 300, "speedMultiplier": 0.9, "scale": 1.5, "preferredHeight": 2.0, "desc": "Changes sex from female to male during its lifecycle. Important for urchin control." },
-  { "id": "senorita", "name": "Senorita Wrasse", "color": "#ffff00", "count": 300, "speedMultiplier": 1.3, "scale": 0.7, "preferredHeight": 4.5, "desc": "Slender wrasse that acts as a cleaner fish for larger species." },
-  { "id": "kelpbass", "name": "Kelp Bass", "color": "#556b2f", "count": 300, "speedMultiplier": 1.0, "scale": 1.2, "preferredHeight": 2.5, "desc": "A popular game fish found primarily in kelp forests." }
+  {
+    "id": "pennatuloidea",
+    "name": "Sea Pen",
+    "color": "#55aaff",
+    "count": 1734,
+    "speedMultiplier": 1.0947021443460307,
+    "scale": 1.1022540680750965,
+    "preferredHeight": 4.423574725670288,
+    "desc": "Colonial marine cnidarians that look like antique quill pens."
+  },
+  {
+    "id": "ptilosarcus",
+    "name": "Orange Sea Pen",
+    "color": "#ffaa55",
+    "count": 128,
+    "speedMultiplier": 1.139809707269472,
+    "scale": 0.9538479336419112,
+    "preferredHeight": 1.1425452022751494,
+    "desc": "A large, bright orange sea pen that can retract into the sandy bottom."
+  },
+  {
+    "id": "rossellidae",
+    "name": "Glass Sponge",
+    "color": "#55ffaa",
+    "count": 426,
+    "speedMultiplier": 0.9718520148079357,
+    "scale": 1.12063844168983,
+    "preferredHeight": 3.4318055919275183,
+    "desc": "Deep-sea sponges with a skeleton made of silica glass fibers."
+  },
+  {
+    "id": "suberites",
+    "name": "Sea Orange Sponge",
+    "color": "#ff55aa",
+    "count": 1944,
+    "speedMultiplier": 1.164586990844155,
+    "scale": 1.3017811034894395,
+    "preferredHeight": 2.394392854135175,
+    "desc": "A firm, massive sponge often found in bright orange or yellow hues."
+  },
+  {
+    "id": "porifera",
+    "name": "Encrusting Sponge",
+    "color": "#ffa500",
+    "count": 7031,
+    "speedMultiplier": 1.1134188021486915,
+    "scale": 1.421010191462862,
+    "preferredHeight": 3.0623540824628463,
+    "desc": "Simple multicellular animals that filter water for food through tiny pores."
+  },
+  {
+    "id": "octocorallia",
+    "name": "Soft Coral",
+    "color": "#ff4500",
+    "count": 510,
+    "speedMultiplier": 0.8837098238952185,
+    "scale": 0.9000367369643821,
+    "preferredHeight": 5.313790505436723,
+    "desc": "Corals with eight-fold symmetry, often forming flexible, swaying structures."
+  },
+  {
+    "id": "aphrocallistes",
+    "name": "Cloud Sponge",
+    "color": "#8b0000",
+    "count": 329,
+    "speedMultiplier": 0.972730809250468,
+    "scale": 1.2437177948815084,
+    "preferredHeight": 4.756977511929315,
+    "desc": "A large, complex glass sponge that forms delicate, cloud-like structures."
+  },
+  {
+    "id": "farrea",
+    "name": "Lace Sponge",
+    "color": "#ffff00",
+    "count": 66,
+    "speedMultiplier": 1.1577464168960354,
+    "scale": 1.1119937663329416,
+    "preferredHeight": 5.48000722655604,
+    "desc": "A branching glass sponge that creates intricate, lace-like skeletal networks."
+  },
+  {
+    "id": "balticina",
+    "name": "Sea Whip",
+    "color": "#556b2f",
+    "count": 401,
+    "speedMultiplier": 0.9332941335747581,
+    "scale": 1.2440239413774374,
+    "preferredHeight": 5.62236132941519,
+    "desc": "A tall, slender sea pen that resembles a long whip rising from the seabed."
+  },
+  {
+    "id": "hexactinellida",
+    "name": "Hexactinellid Sponge",
+    "color": "#4682b4",
+    "count": 4503,
+    "speedMultiplier": 0.8826316777438908,
+    "scale": 1.0026155063012663,
+    "preferredHeight": 4.040911493295625,
+    "desc": "Unique sponges known for their rigid, glass-like skeletal structures."
+  },
+  {
+    "id": "leptogorgia",
+    "name": "Sea Fan",
+    "color": "#d2691e",
+    "count": 329,
+    "speedMultiplier": 1.4781988512562823,
+    "scale": 1.3334628734770915,
+    "preferredHeight": 4.388145938030753,
+    "desc": "A type of gorgonian coral that grows in a flat, fan-like pattern to catch currents."
+  },
+  {
+    "id": "desmophyllum",
+    "name": "Cockscomb Cup Coral",
+    "color": "#3cb371",
+    "count": 1068,
+    "speedMultiplier": 0.9057808969976548,
+    "scale": 1.0494870081589713,
+    "preferredHeight": 5.887987196503208,
+    "desc": "A large, solitary stony coral with a distinctive cockscomb-like shape."
+  },
+  {
+    "id": "mycale",
+    "name": "Breadcrumb Sponge",
+    "color": "#ff1493",
+    "count": 219,
+    "speedMultiplier": 1.1345165795763297,
+    "scale": 1.2985149620387277,
+    "preferredHeight": 4.590042260759443,
+    "desc": "A common sponge known for its crumbly texture and varied growth forms."
+  },
+  {
+    "id": "paragorgia",
+    "name": "Bubblegum Coral",
+    "color": "#ffd700",
+    "count": 84,
+    "speedMultiplier": 1.3501236354146111,
+    "scale": 0.7919443501441998,
+    "preferredHeight": 2.337448694161419,
+    "desc": "A large, branching soft coral with bulbous tips that look like bubblegum."
+  },
+  {
+    "id": "plumarella",
+    "name": "Fan Coral",
+    "color": "#ff0000",
+    "count": 1017,
+    "speedMultiplier": 1.0066917360541734,
+    "scale": 1.4500616073261603,
+    "preferredHeight": 5.0428051106539,
+    "desc": "A delicate, finely-branched coral that resembles a tiny, feathery fan."
+  },
+  {
+    "id": "poecillastra",
+    "name": "Plate Sponge",
+    "color": "#800000",
+    "count": 1269,
+    "speedMultiplier": 0.827964191945632,
+    "scale": 1.4251839804590232,
+    "preferredHeight": 1.589177599458811,
+    "desc": "A large, flat sponge that grows in plate-like or saucer-like shapes."
+  },
+  {
+    "id": "stylatula",
+    "name": "Slender Sea Pen",
+    "color": "#fffff0",
+    "count": 38,
+    "speedMultiplier": 1.1039002798046216,
+    "scale": 0.7131930787909977,
+    "preferredHeight": 2.5645916644243885,
+    "desc": "A thin, graceful sea pen that glows with bioluminescence when disturbed."
+  },
+  {
+    "id": "swiftia",
+    "name": "Red Sea Fan",
+    "color": "#008080",
+    "count": 56,
+    "speedMultiplier": 1.340577006106652,
+    "scale": 0.943610939520147,
+    "preferredHeight": 4.974458135712884,
+    "desc": "A vibrant red gorgonian coral that adds brilliant color to the deep reef."
+  },
+  {
+    "id": "acanthogorgia",
+    "name": "Thorny Coral",
+    "color": "#000080",
+    "count": 1829,
+    "speedMultiplier": 1.3795638601511815,
+    "scale": 0.8617984933035361,
+    "preferredHeight": 2.7669020459808706,
+    "desc": "A branching coral covered in tiny, sharp-looking polyps."
+  },
+  {
+    "id": "heterochone",
+    "name": "Finger Sponge",
+    "color": "#808000",
+    "count": 81,
+    "speedMultiplier": 1.4441066570444736,
+    "scale": 0.8145369132496716,
+    "preferredHeight": 1.4968213063539684,
+    "desc": "A glass sponge that grows in thick, finger-like projections."
+  },
+  {
+    "id": "acanthascus",
+    "name": "Vase Glass Sponge",
+    "color": "#800080",
+    "count": 83,
+    "speedMultiplier": 1.2687394990831558,
+    "scale": 0.8431995987221202,
+    "preferredHeight": 3.7117103627187813,
+    "desc": "A large, vase-shaped sponge with a complex, hairy-looking glass skeleton."
+  },
+  {
+    "id": "stachyptilum",
+    "name": "Feather Sea Pen",
+    "color": "#00ff00",
+    "count": 26,
+    "speedMultiplier": 0.880580760231322,
+    "scale": 1.252905634928736,
+    "preferredHeight": 5.465225099103782,
+    "desc": "A sea pen with a feathery appearance, anchored firmly in soft sediments."
+  },
+  {
+    "id": "heteropolypus",
+    "name": "Mushroom Soft Coral",
+    "color": "#0000ff",
+    "count": 87,
+    "speedMultiplier": 1.3275235541300878,
+    "scale": 0.978303383844223,
+    "preferredHeight": 5.50105160379045,
+    "desc": "A colonial soft coral that resembles a cluster of small mushrooms."
+  },
+  {
+    "id": "thenea",
+    "name": "Soccer Ball Sponge",
+    "color": "#ff00ff",
+    "count": 482,
+    "speedMultiplier": 0.9082441828434816,
+    "scale": 0.8521770422582949,
+    "preferredHeight": 2.5808345559724213,
+    "desc": "A round, compact sponge that looks like a small ball resting on the floor."
+  },
+  {
+    "id": "callistephanus",
+    "name": "Golden Fan Coral",
+    "color": "#00ffff",
+    "count": 29,
+    "speedMultiplier": 1.0037081975342057,
+    "scale": 1.1263833593558084,
+    "preferredHeight": 3.8555710991534133,
+    "desc": "A beautiful fan coral known for its bright yellow or golden coloration."
+  },
+  {
+    "id": "pennatula",
+    "name": "Fleshy Sea Pen",
+    "color": "#c0c0c0",
+    "count": 268,
+    "speedMultiplier": 1.2470737943612615,
+    "scale": 0.8863984145471657,
+    "preferredHeight": 1.389747349123667,
+    "desc": "A robust, fleshy sea pen with large, prominent polyps for filtering."
+  },
+  {
+    "id": "anthoptilum",
+    "name": "Deep-Sea Pen",
+    "color": "#808080",
+    "count": 3,
+    "speedMultiplier": 0.8637296167133209,
+    "scale": 1.411830702220112,
+    "preferredHeight": 1.0392693060476335,
+    "desc": "A long-stemmed sea pen found in the deeper reaches of the ocean floor."
+  },
+  {
+    "id": "hyalonema",
+    "name": "Bird's Nest Sponge",
+    "color": "#999999",
+    "count": 34,
+    "speedMultiplier": 1.0722036190311146,
+    "scale": 1.4862305261529343,
+    "preferredHeight": 2.925286637917194,
+    "desc": "A sponge supported by a long stalk of glass fibers, resembling a nest."
+  },
+  {
+    "id": "leucandra",
+    "name": "Calcareous Sponge",
+    "color": "#f0e68c",
+    "count": 95,
+    "speedMultiplier": 1.204932503207125,
+    "scale": 1.0734970573357232,
+    "preferredHeight": 5.661757976836924,
+    "desc": "A small sponge with a skeleton made of calcium carbonate spikes."
+  },
+  {
+    "id": "tethya",
+    "name": "Orange Ball Sponge",
+    "color": "#e6e6fa",
+    "count": 36,
+    "speedMultiplier": 1.2937337786011294,
+    "scale": 0.979754449326796,
+    "preferredHeight": 1.3408950483016049,
+    "desc": "A bright orange, spherical sponge with a rough, textured surface."
+  }
 ]
