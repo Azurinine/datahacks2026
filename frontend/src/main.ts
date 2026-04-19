@@ -74,10 +74,15 @@ scene.add(camera);
 // Movement
 const controls = new PointerLockControls(camera, document.body);
 const instructions = document.getElementById('instructions')!;
+let isMenuMode = false; // New flag for the M-key menu
+
 instructions.addEventListener('click', () => controls.lock());
-controls.addEventListener('lock', () => instructions.style.opacity = '0');
+controls.addEventListener('lock', () => {
+    instructions.style.opacity = '0';
+    isMenuMode = false;
+});
 controls.addEventListener('unlock', () => {
-    if (fishPopup.style.display !== 'block') {
+    if (isMenuMode) {
         instructions.style.opacity = '1';
     }
 });
@@ -93,14 +98,41 @@ const fishPopup = document.getElementById('fish-popup')!;
 const fishNameEl = document.getElementById('fish-name')!;
 const fishDescEl = document.getElementById('fish-desc')!;
 const popupClose = document.getElementById('popup-close')!;
+const bingoBookEl = document.getElementById('bingo-book')!;
+const bingoGridEl = document.getElementById('bingo-grid')!;
+const bingoOverlay = document.getElementById('bingo-overlay')!;
 
 fishPopup.addEventListener('click', (e) => e.stopPropagation());
+bingoOverlay.addEventListener('click', () => toggleBingoBook());
 
 let populations: PopulationYear[] = [];
+let coralMetadata: any[] = [];
+let discoveredSpecies = new Set(JSON.parse(localStorage.getItem('discoveredSpecies') || '[]'));
 
 document.addEventListener('keydown', (event) => {
+    if (event.code === 'Tab') {
+        event.preventDefault();
+        toggleBingoBook();
+        return;
+    }
+    if (event.code === 'Escape') {
+        if (fishPopup.style.display === 'block' || bingoBookEl.style.display === 'block') {
+            event.preventDefault();
+            event.stopPropagation();
+            if (fishPopup.style.display === 'block') closeFishPopup();
+            else if (bingoBookEl.style.display === 'block') toggleBingoBook();
+            return;
+        }
+    }
     switch (event.code) {
+        case 'KeyM':
+            if (controls.isLocked) {
+                isMenuMode = true;
+                controls.unlock();
+            }
+            break;
         case 'KeyW': moveState.forward = true; break;
+// ... (rest of switch)
         case 'KeyA': moveState.left = true; break;
         case 'KeyS': moveState.backward = true; break;
         case 'KeyD': moveState.right = true; break;
@@ -139,12 +171,17 @@ brightnessSlider.addEventListener('input', (e) => updateBrightness(parseFloat((e
 brightnessSlider.addEventListener('click', (e) => e.stopPropagation());
 yearSlider.addEventListener('click', (e) => e.stopPropagation());
 
-popupClose.addEventListener('click', (e) => {
-    e.stopPropagation();
+function closeFishPopup() {
+    // isMenuMode remains false, so instructions won't show
     fishPopup.style.display = 'none';
     isPaused = false;
     document.getElementById('pause-indicator')!.style.display = 'none';
     controls.lock();
+}
+
+popupClose.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeFishPopup();
 });
 
 // Interaction
@@ -163,6 +200,7 @@ window.addEventListener('mousemove', (event) => {
 
 window.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return; // Only left click
+    if (bingoBookEl.style.display === 'block') return; // Disable clicking when Bingo Book is open
     if (!controls.isLocked && !isPaused) return; 
 
     raycaster.setFromCamera(mouse, camera);
@@ -184,7 +222,7 @@ window.addEventListener('pointerdown', (event) => {
         }
         const data = obj.userData;
         if (data.type === 'coral') {
-            showPopup(data.name.toUpperCase(), data.desc);
+            showPopup(data.id, data.name.toUpperCase(), data.desc);
             return; // Exit early since we hit a coral
         }
     } else {
@@ -217,7 +255,7 @@ window.addEventListener('pointerdown', (event) => {
     if (targetId !== -1) {
         const config = fishConfigs.find(c => c.id === targetSpecies);
         if (config) {
-            showPopup(targetSpecies.toUpperCase(), config.desc || `Detailed scan for ${targetSpecies} sequence complete.`);
+            showPopup(config.id, targetSpecies.toUpperCase(), config.desc || `Detailed scan for ${targetSpecies} sequence complete.`);
         }
     } else if (coralIntersects.length > 0) {
         let obj = coralIntersects[0].object;
@@ -226,18 +264,78 @@ window.addEventListener('pointerdown', (event) => {
         }
         const data = obj.userData;
         if (data.type === 'coral') {
-            showPopup(data.name.toUpperCase(), data.desc);
+            showPopup(data.id, data.name.toUpperCase(), data.desc);
         }
     }
 });
 
-function showPopup(title: string, desc: string) {
+function showPopup(id: string, title: string, desc: string) {
     fishNameEl.innerText = title;
     fishDescEl.innerText = desc;
     fishPopup.style.display = 'block';
     isPaused = true;
     document.getElementById('pause-indicator')!.style.display = 'flex';
     controls.unlock();
+
+    // Discovery Tracking
+    if (!discoveredSpecies.has(id)) {
+        discoveredSpecies.add(id);
+        localStorage.setItem('discoveredSpecies', JSON.stringify(Array.from(discoveredSpecies)));
+    }
+}
+
+function toggleBingoBook() {
+    const isVisible = bingoBookEl.style.display === 'block';
+    if (isVisible) {
+        bingoBookEl.style.display = 'none';
+        bingoOverlay.style.display = 'none';
+        isPaused = false;
+        document.getElementById('pause-indicator')!.style.display = 'none';
+        controls.lock();
+    } else {
+        renderBingoBook();
+        bingoBookEl.style.display = 'block';
+        bingoOverlay.style.display = 'block';
+        isPaused = true;
+        document.getElementById('pause-indicator')!.style.display = 'flex';
+        controls.unlock();
+    }
+}
+
+function renderBingoBook() {
+    bingoGridEl.innerHTML = '';
+    
+    const categories = [
+        { title: 'Vertebrate Marine Life', species: fishConfigs.map(f => ({ id: f.id, name: f.name || f.id })) },
+        { title: 'Coral Reef Structures', species: coralMetadata.map(c => ({ id: c.id, name: c.name || c.id })) }
+    ];
+
+    categories.forEach(category => {
+        // Add Header
+        const header = document.createElement('div');
+        header.className = 'bingo-category-header';
+        header.innerText = category.title;
+        bingoGridEl.appendChild(header);
+
+        // Add Species
+        category.species.forEach(species => {
+            const isDiscovered = discoveredSpecies.has(species.id);
+            const slot = document.createElement('div');
+            slot.className = `bingo-slot ${isDiscovered ? 'discovered' : ''}`;
+            
+            const icon = document.createElement('div');
+            icon.className = 'bingo-icon';
+            icon.innerText = isDiscovered ? '✓' : '?';
+            
+            const label = document.createElement('div');
+            label.className = 'bingo-label';
+            label.innerText = species.name;
+
+            slot.appendChild(icon);
+            slot.appendChild(label);
+            bingoGridEl.appendChild(slot);
+        });
+    });
 }
 
 // Floor
@@ -272,6 +370,7 @@ async function init() {
     ]);
 
     populations = popData;
+    coralMetadata = coralReg;
     fishConfigs = fishMeta.map((f: any) => ({
         ...f,
         color: parseInt(f.color.replace('#', '0x'))
