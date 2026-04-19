@@ -423,6 +423,7 @@ export function setupInteractivePreview(
 }
 
 const _thumbnailCache = new Map<string, string>();
+let _sharedThumbnailRenderer: THREE.WebGLRenderer | null = null;
 
 export function generateThumbnail(
     type: 'fish' | 'coral',
@@ -431,14 +432,15 @@ export function generateThumbnail(
 ): string {
     if (_thumbnailCache.has(config.id)) return _thumbnailCache.get(config.id)!;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = size; canvas.height = size;
-    const offscreenRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    offscreenRenderer.setSize(size, size);
-    offscreenRenderer.setClearColor(0x000000, 0);
+    if (!_sharedThumbnailRenderer) {
+        _sharedThumbnailRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        _sharedThumbnailRenderer.setClearColor(0x000000, 0);
+    }
+    
+    _sharedThumbnailRenderer.setSize(size, size);
 
     const thumbScene = new THREE.Scene();
-    thumbScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    thumbScene.add(new THREE.AmbientLight(0xffffff, 0.8));
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(2, 4, 3);
     thumbScene.add(dirLight);
@@ -479,9 +481,35 @@ export function generateThumbnail(
     );
     thumbCamera.lookAt(center);
 
-    offscreenRenderer.render(thumbScene, thumbCamera);
-    const dataUrl = canvas.toDataURL('image/png');
-    offscreenRenderer.dispose();
+    _sharedThumbnailRenderer.render(thumbScene, thumbCamera);
+    const dataUrl = _sharedThumbnailRenderer.domElement.toDataURL('image/png');
+    
+    // Cleanup
+    mesh.geometry.dispose();
+    (mesh.material as THREE.Material).dispose();
+    
     _thumbnailCache.set(config.id, dataUrl);
     return dataUrl;
+}
+
+export async function warmThumbnailCache(
+    fishConfigs: FishConfig[],
+    coralConfigs: CoralConfig[]
+) {
+    const coralIds = new Set(coralConfigs.map(c => c.id));
+    
+    // Generate thumbnails sequentially to avoid overloading GPU
+    for (const cfg of fishConfigs) {
+        const type = coralIds.has(cfg.id) ? 'coral' : 'fish';
+        generateThumbnail(type, cfg);
+        await new Promise(r => setTimeout(r, 10)); // Tiny breather
+    }
+    
+    // Also warm anything in coralConfigs that might not be in fishConfigs
+    for (const cfg of coralConfigs) {
+        if (!_thumbnailCache.has(cfg.id)) {
+            generateThumbnail('coral', cfg);
+            await new Promise(r => setTimeout(r, 10));
+        }
+    }
 }

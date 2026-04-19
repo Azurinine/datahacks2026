@@ -361,7 +361,116 @@ body {
     border: 1px solid rgba(255,255,255,0.3);
 }
 
-/* Range Input Styling */
+/* Temporal Rig Progress Bar */
+#year-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(0, 229, 255, 0.1);
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    margin: 10px 0;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+
+#year-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    box-shadow: 0 0 15px var(--primary);
+    transition: width 0.1s linear;
+}
+
+/* Warning Banner Overhaul */
+#warning-banner {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 700px;
+    max-width: 90vw;
+    background: linear-gradient(135deg, rgba(80, 0, 0, 0.95), rgba(40, 0, 0, 0.98));
+    border: 3px solid var(--danger);
+    border-radius: 4px;
+    padding: 30px;
+    z-index: 400;
+    display: none;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 0 50px rgba(255, 0, 0, 0.6), inset 0 0 30px rgba(255, 0, 0, 0.3);
+    backdrop-filter: blur(15px);
+    text-align: center;
+}
+
+#warning-header {
+    color: var(--danger);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 10px;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+}
+
+#warning-text {
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+#warning-banner.active {
+    display: block;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    animation: criticalAlert 0.5s infinite alternate;
+}
+
+@keyframes criticalAlert {
+    from { transform: translate(-50%, -50%) scale(1); border-color: #ff0000; box-shadow: 0 0 40px rgba(255, 0, 0, 0.4); }
+    to { transform: translate(-50%, -50%) scale(1.02); border-color: #ff8888; box-shadow: 0 0 70px rgba(255, 0, 0, 0.8); }
+}
+
+/* Chat System - Minecraft Style */
+#chat-container {
+    position: absolute;
+    bottom: 40px;
+    left: 40px;
+    width: 450px;
+    max-height: 250px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 4px;
+    pointer-events: none;
+    z-index: 350;
+    mask-image: linear-gradient(to top, black 80%, transparent 100%);
+}
+
+.chat-msg {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 4px 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    text-shadow: 1px 1px 1px #000;
+    animation: chatIn 0.2s ease-out;
+    border-left: 3px solid transparent;
+}
+
+.chat-msg.info { border-left-color: #55ff55; color: #fff; }
+.chat-msg.warning { border-left-color: #ffff55; color: #ffff55; }
+.chat-msg.critical { border-left-color: #ff5555; color: #ff5555; background: rgba(80, 0, 0, 0.6); }
+
+@keyframes chatIn {
+    from { transform: translateX(-20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Range Input Styling (Keep for any remaining sliders) */
 input[type=range] {
     -webkit-appearance: none;
     width: 100%;
@@ -576,17 +685,34 @@ input[type=range]::-webkit-slider-thumb:hover {
     transform: scale(1.1);
 }
 
-.bingo-preview-canvas {
-    width: 90px;
-    height: 90px;
-    display: block;
-    margin-bottom: 6px;
-    cursor: grab;
-    border-radius: 2px;
+.bingo-slot.extinct {
+    border-color: var(--danger);
+    background: rgba(255, 68, 68, 0.05);
 }
 
-.bingo-preview-canvas:active {
-    cursor: grabbing;
+.bingo-slot.extinct .bingo-preview-img {
+    filter: grayscale(1) brightness(0.5);
+}
+
+.extinct-cross {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 80px;
+    color: rgba(255, 68, 68, 0.6);
+    pointer-events: none;
+    font-weight: 100;
+    line-height: 1;
+}
+
+.status-label {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--danger);
+    letter-spacing: 1px;
 }
 
 .bingo-label {
@@ -598,7 +724,179 @@ input[type=range]::-webkit-slider-thumb:hover {
     transition: color 0.3s;
 }
 
-.discovered .bingo-label {
+/* Endgame Stats Screen Styles */
+#endgame-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(20px);
+    display: none;
+    z-index: 1100;
+}
+
+#endgame-stats {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 95%;
+    max-width: 1300px;
+    height: 90%;
+    display: none; /* Keep hidden by default */
+    z-index: 1200;
+    padding: 30px;
+    border-color: var(--primary);
+    background: rgba(5, 15, 20, 0.8);
+    flex-direction: column;
+    gap: 20px;
+}
+
+#discovery-cards-section {
+    width: 100%;
+}
+
+#discovery-cards-scroller {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding: 10px 5px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+}
+
+#discovery-cards-scroller::-webkit-scrollbar { height: 4px; }
+#discovery-cards-scroller::-webkit-scrollbar-thumb { background: var(--primary); }
+
+.discovery-card {
+    flex: 0 0 160px;
+    background: rgba(0, 229, 255, 0.05);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    padding: 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.discovery-card:hover {
+    background: rgba(0, 229, 255, 0.15);
+    border-color: var(--primary);
+    transform: translateY(-5px);
+}
+
+.discovery-card.active {
+    background: rgba(0, 229, 255, 0.2);
+    border-color: var(--secondary);
+    box-shadow: 0 0 15px rgba(0, 255, 170, 0.3);
+}
+
+.discovery-card img {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    margin-bottom: 10px;
+}
+
+.discovery-card-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
     color: #fff;
-    text-shadow: 0 0 4px rgba(255,255,255,0.3);
+    text-transform: uppercase;
+}
+
+.endgame-content-v2 {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 20px;
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.endgame-chart-area {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.endgame-chart-area .stat-box {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.endgame-map-area {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#discovery-map {
+    height: 350px;
+    background: rgba(0, 229, 255, 0.03);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#discovery-map::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 100%; height: 1px; background: rgba(0, 229, 255, 0.1);
+}
+
+#discovery-map::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    width: 1px; height: 100%; background: rgba(0, 229, 255, 0.1);
+}
+
+.map-marker {
+    position: absolute;
+    width: 8px; height: 8px;
+    background: var(--primary);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px var(--primary);
+}
+
+.discovery-item {
+    padding: 12px;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.discovery-name {
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.discovery-info {
+    font-size: 12px;
+    text-align: right;
+    color: #88bbcc;
+}
+
+#endgame-restart {
+    background: var(--primary);
+    color: #000;
+    border: none;
+    padding: 15px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+#endgame-restart:hover {
+    background: #fff;
+    box-shadow: 0 0 20px var(--primary);
 }

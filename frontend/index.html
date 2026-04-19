@@ -26,12 +26,20 @@
         <div class="control-key"><kbd>CLICK</kbd>SCAN</div>
         <div class="control-key"><kbd>P</kbd>FREEZE</div>
         <div class="control-key"><kbd>M</kbd>MENU</div>
-        <div class="control-key"><kbd>[ ]</kbd>YEAR</div>
+        <div class="control-key"><kbd>→</kbd>FAST FORWARD</div>
       </div>
       <p class="click-to-start">[ CLICK ANYWHERE TO START ]</p>
     </div>
 
     <div id="crosshair"><div class="dot"></div></div>
+
+    <div id="warning-banner">
+      <div id="warning-header">SYSTEM ALERT</div>
+      <div id="warning-text"></div>
+    </div>
+
+    <!-- Minecraft style chat -->
+    <div id="chat-container"></div>
 
     <div id="pause-indicator">
       <div class="pause-bar"></div>
@@ -67,9 +75,11 @@
         <div class="panel-header">TEMPORAL RIG</div>
         <div id="year-display">YEAR // <span id="year-value" class="highlight">2014</span></div>
         <div id="slider-wrapper">
-            <input type="range" id="year-slider" min="2014" max="2026" step="1" value="2014">
+          <input type="range" id="year-slider" min="2014" max="2026" value="2014" step="1">
         </div>
-        <div class="time-hint">PRESS <kbd>[</kbd> OR <kbd>]</kbd> TO STEP</div>
+        <div id="year-progress-bar">
+            <div id="year-progress-fill"></div>
+        </div>
         <div class="setting-row menu-hint">
           <span class="stat-label">PRESS <kbd>M</kbd> FOR MENU</span>
         </div>
@@ -91,6 +101,36 @@
     <div id="bingo-book" class="hud-panel">
       <div class="panel-header">FIELD BINGO BOOK [ TAB TO CLOSE ]</div>
       <div id="bingo-grid"></div>
+    </div>
+
+    <!-- Endgame Stats Screen -->
+    <div id="endgame-overlay"></div>
+    <div id="endgame-stats" class="hud-panel">
+      <div class="panel-header">MISSION COMPLETE: CHANNEL ISLANDS EXPEDITION</div>
+      
+      <!-- Discovery Cards Carousel -->
+      <div id="discovery-cards-section">
+        <div class="stat-label">DISCOVERED SPECIES [ SELECT FOR ARCHIVE DATA ]</div>
+        <div id="discovery-cards-scroller"></div>
+      </div>
+
+      <div class="endgame-content-v2">
+        <div class="endgame-chart-area">
+          <div class="stat-box">
+            <div id="active-species-title" class="stat-label">TOTAL ECOSYSTEM TREND (2014-2026)</div>
+            <div class="chart-container">
+              <canvas id="population-chart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="endgame-map-area">
+          <div class="stat-box">
+            <div class="stat-label">SONAR DISCOVERY LOCATIONS</div>
+            <div id="discovery-map"></div>
+          </div>
+          <button id="endgame-restart">RE-INITIATE DIVE</button>
+        </div>
+      </div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

@@ -1,0 +1,178 @@
+[
+  {
+    "year": 2014,
+    "message": "SYSTEM ONLINE: Environmental sensors active. Beginning multi-year dive sequence."
+  },
+  {
+    "year": 2015,
+    "message": "WARNING: PENNATULOIDEA population has crashed."
+  },
+  {
+    "year": 2016,
+    "message": "CRITICAL: LEPTOGORGIA is close to extinction!"
+  },
+  {
+    "year": 2016,
+    "message": "CRITICAL: EUGORGIA is close to extinction!"
+  },
+  {
+    "year": 2016,
+    "message": "CRITICAL: BALTICINA is close to extinction!"
+  },
+  {
+    "year": 2016,
+    "message": "CRITICAL: PTILOSARCUS is close to extinction!"
+  },
+  {
+    "year": 2016,
+    "message": "CRITICAL: PENNATULOIDEA is close to extinction!"
+  },
+  {
+    "year": 2016,
+    "message": "CRITICAL: ANTIPATHES is close to extinction!"
+  },
+  {
+    "year": 2016,
+    "message": "ALERT: Major decline in overall fish biomass detected. System instability rising."
+  },
+  {
+    "year": 2016,
+    "message": "WARNING: LEPTOGORGIA population has crashed."
+  },
+  {
+    "year": 2016,
+    "message": "WARNING: EUGORGIA population has crashed."
+  },
+  {
+    "year": 2016,
+    "message": "WARNING: BALTICINA population has crashed."
+  },
+  {
+    "year": 2016,
+    "message": "WARNING: PTILOSARCUS population has crashed."
+  },
+  {
+    "year": 2016,
+    "message": "WARNING: PENNATULOIDEA population has crashed."
+  },
+  {
+    "year": 2016,
+    "message": "WARNING: ANTIPATHES population has crashed."
+  },
+  {
+    "year": 2016,
+    "message": "WARNING: PARAGORGIA population has crashed."
+  },
+  {
+    "year": 2017,
+    "message": "CRITICAL: PARAGORGIA is close to extinction!"
+  },
+  {
+    "year": 2017,
+    "message": "WARNING: PLUMARELLA population has crashed."
+  },
+  {
+    "year": 2018,
+    "message": "WARNING: OCTOCORALLIA population has crashed."
+  },
+  {
+    "year": 2018,
+    "message": "WARNING: ANTIPATHES population has crashed."
+  },
+  {
+    "year": 2019,
+    "message": "CRITICAL: FLATFISH is close to extinction!"
+  },
+  {
+    "year": 2019,
+    "message": "CRITICAL: SCULPIN is close to extinction!"
+  },
+  {
+    "year": 2019,
+    "message": "CRITICAL: RATTAIL is close to extinction!"
+  },
+  {
+    "year": 2019,
+    "message": "CRITICAL: COMBFISH is close to extinction!"
+  },
+  {
+    "year": 2019,
+    "message": "CRITICAL: CATSHARK is close to extinction!"
+  },
+  {
+    "year": 2019,
+    "message": "CRITICAL: ROCKFISH is close to extinction!"
+  },
+  {
+    "year": 2019,
+    "message": "WARNING: FLATFISH population has crashed."
+  },
+  {
+    "year": 2019,
+    "message": "WARNING: COMBFISH population has crashed."
+  },
+  {
+    "year": 2019,
+    "message": "WARNING: ROCKFISH population has crashed."
+  },
+  {
+    "year": 2021,
+    "message": "WARNING: Black Coral and Bubblegum Coral reached bleaching threshold. Vitality dropping."
+  },
+  {
+    "year": 2021,
+    "message": "ALERT: Major decline in overall fish biomass detected. System instability rising."
+  },
+  {
+    "year": 2021,
+    "message": "WARNING: EUGORGIA population has crashed."
+  },
+  {
+    "year": 2022,
+    "message": "ALERT: Major decline in overall fish biomass detected. System instability rising."
+  },
+  {
+    "year": 2022,
+    "message": "WARNING: PENNATULOIDEA population has crashed."
+  },
+  {
+    "year": 2023,
+    "message": "CRITICAL: PACIFIC HAKE is close to extinction!"
+  },
+  {
+    "year": 2025,
+    "message": "CRITICAL: Widespread bleaching observed! Sea Whip Pen, Bright Sea Fan, Soft Coral and others are dying."
+  },
+  {
+    "year": 2025,
+    "message": "CRITICAL: GRENADIER is close to extinction!"
+  },
+  {
+    "year": 2025,
+    "message": "CRITICAL: BLACKTIP POACHER is close to extinction!"
+  },
+  {
+    "year": 2025,
+    "message": "CRITICAL: EELPOUT is close to extinction!"
+  },
+  {
+    "year": 2025,
+    "message": "CRITICAL: PINK SEAPERCH is close to extinction!"
+  },
+  {
+    "year": 2026,
+    "message": "CRITICAL: CUSK EEL is close to extinction!"
+  },
+  {
+    "year": 2026,
+    "message": "CRITICAL: PACIFIC SANDDAB is close to extinction!"
+  },
+  {
+    "year": 2026,
+    "message": "CRITICAL: MIDSHIPMAN FISH is close to extinction!"
+  },
+  {
+    "year": 2026,
+    "message": "CRITICAL: LANTERNFISH is close to extinction!"
+  }
+]
