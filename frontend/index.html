@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Channel Islands Explorer</title>
+    <!-- Tech Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app"></div>
+    
+    <div id="instructions">
+      <h1>CHANNEL ISLANDS EXPLORER</h1>
+      <div class="divider"></div>
+      <p class="subtitle">INITIATE DIVE SEQUENCE</p>
+      <div class="controls-grid">
+        <div class="control-key"><span>W A S D</span>MOVE</div>
+        <div class="control-key"><span>SPACE</span>ASCEND</div>
+        <div class="control-key"><span>SHIFT</span>DESCEND</div>
+        <div class="control-key"><span>MOUSE</span>LOOK</div>
+        <div class="control-key"><span>P</span>FREEZE TIME</div>
+        <div class="control-key"><span>[ ]</span>YEAR STEP</div>
+        <div class="control-key"><span>F</span>HEADLIGHT</div>
+        <div class="control-key"><span>J L</span>BRIGHTNESS</div>
+      </div>
+      <p class="click-to-start">[ CLICK ANYWHERE TO START ]</p>
+    </div>
+
+    <div id="crosshair"></div>
+
+    <div id="pause-indicator">
+      <div class="pause-bar"></div>
+      <div class="pause-bar"></div>
+      <span>FROZEN</span>
+    </div>
+
+    <!-- Redesigned HUD -->
+    <div id="hud-container">
+      
+      <!-- Top Left: Sensor Readings -->
+      <div id="panel-stats" class="hud-panel">
+        <div class="panel-header">ENVIRONMENT SENSORS</div>
+        <div class="stat-row"><span class="stat-label">pH LEVEL</span> <span id="stat-ph" class="stat-value">--</span></div>
+        <div class="stat-row"><span class="stat-label">TEMPERATURE</span> <span id="stat-temp" class="stat-value">-- °C</span></div>
+        <div class="stat-row"><span class="stat-label">ECO VITALITY</span> <span id="stat-vit" class="stat-value highlight">--</span></div>
+      </div>
+
+      <!-- Top Right: System Options -->
+      <div id="panel-settings" class="hud-panel">
+        <div class="panel-header">SYSTEM RIG</div>
+        <div class="setting-row">
+          <label for="brightness-slider" class="stat-label">HEADLIGHT [ F ]</label>
+          <input type="range" id="brightness-slider" min="0" max="3" step="0.1" value="1.2">
+        </div>
+      </div>
+
+      <!-- Bottom Center: Time Controls -->
+      <div id="panel-time" class="hud-panel">
+        <div id="year-display">SIMULATION YEAR // <span id="year-value" class="highlight">2014</span></div>
+        <div id="slider-wrapper">
+            <input type="range" id="year-slider" min="2014" max="2026" step="1" value="2014">
+        </div>
+        <div class="time-hint">[ Press [ or ] to step ]</div>
+      </div>
+
+    </div>
+
+    <!-- Fish Encyclopedia Popup -->
+    <div id="fish-popup" class="hud-panel">
+      <div id="popup-close">×</div>
+      <div class="panel-header">SPECIES ENCYCLOPEDIA</div>
+      <h2 id="fish-name">GARIBALDI</h2>
+      <p id="fish-desc">California state marine fish, known for its brilliant orange color and territorial behavior in rocky reef environments.</p>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
