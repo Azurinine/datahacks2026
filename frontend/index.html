@@ -25,7 +25,7 @@
         <div class="control-key"><kbd>CLICK / E</kbd>SCAN</div>
         <div class="control-key"><kbd>P</kbd>FREEZE</div>
         <div class="control-key"><kbd>M</kbd>MENU</div>
-        <div class="control-key"><kbd>→</kbd>FAST FORWARD</div>
+<div class="control-key"><kbd>I</kbd>SYSTEM LOG</div>
       </div>
       <p class="click-to-start">[ CLICK OR PRESS SPACE TO START ]</p>
     </div>
@@ -52,6 +52,15 @@
         <div id="row-ph" class="stat-row"><span class="stat-label">pH LEVEL</span> <span id="stat-ph" class="stat-value">--</span></div>
         <div id="row-temp" class="stat-row"><span class="stat-label">TEMPERATURE</span> <span id="stat-temp" class="stat-value">-- °C</span></div>
         <div id="row-vit" class="stat-row"><span class="stat-label">ECO VITALITY</span> <span id="stat-vit" class="stat-value highlight">--</span></div>
+      </div>
+
+      <!-- System Log Trigger -->
+      <div id="info-trigger">
+        <div class="trigger-label">
+          <span class="main-label">SYSTEM LOG</span>
+          <span class="key-hint">PRESS <kbd>I</kbd> FOR INFO</span>
+        </div>
+        <div id="notif-info-dot" class="info-dot" style="display:none;"></div>
       </div>
 
       <!-- Bingo Book Floating Icon (Relocated to Top Left) -->
@@ -102,6 +111,15 @@
       <div id="popup-stats"></div>
       <h2 id="fish-name">GARIBALDI</h2>
       <p id="fish-desc">California state marine fish, known for its brilliant orange color and territorial behavior in rocky reef environments.</p>
+    </div>
+
+    <!-- System Log Popup -->
+    <div id="info-overlay"></div>
+    <div id="info-popup" class="hud-panel" style="display:none;">
+      <div id="info-popup-close">×</div>
+      <div class="panel-header">SYSTEM LOG — YEAR <span id="info-popup-year"></span></div>
+      <div id="info-popup-body"></div>
+      <div class="menu-hint">PRESS <kbd>I</kbd> OR <kbd>ESC</kbd> TO CLOSE</div>
     </div>
 
     <!-- Bingo Book -->

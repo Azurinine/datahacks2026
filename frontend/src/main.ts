@@ -113,6 +113,13 @@ const bingoTrigger = document.getElementById('bingo-trigger')!;
 const notifNewEl = document.getElementById('notif-new')!;
 const notifWarningEl = document.getElementById('notif-warning')!;
 const notifCriticalEl = document.getElementById('notif-critical')!;
+const infoPopupEl = document.getElementById('info-popup')!;
+const infoPopupClose = document.getElementById('info-popup-close')!;
+const infoPopupBody = document.getElementById('info-popup-body')!;
+const infoPopupYear = document.getElementById('info-popup-year')!;
+const infoOverlay = document.getElementById('info-overlay')!;
+const notifInfoDot = document.getElementById('notif-info-dot')!;
+const infoTrigger = document.getElementById('info-trigger')!;
 
 // Tutorial UI
 const tutorialPrompt = document.getElementById('tutorial-prompt')!;
@@ -132,6 +139,8 @@ bingoTrigger.addEventListener('click', toggleBingoBook);
 let isPaused = false;
 let gameEnded = false;
 let missionChart: Chart | null = null;
+let chartKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+let chartPulseRaf: number | null = null;
 let newCount = 0;
 let warningCount = 0;
 let criticalCount = 0;
@@ -217,6 +226,63 @@ function closeFishPopup() {
         pauseIndicator.style.display = 'none';
         controls.lock(); // Re-lock immediately
     }
+}
+
+function openInfoPopup() {
+    if (performance.now() - lastUIActionTime < UI_COOLDOWN) return;
+    lastUIActionTime = performance.now();
+
+    const yearWarnings = warnings.filter(w => w.year === currentYear);
+    const criticals = yearWarnings.filter(w => w.message.includes('CRITICAL') || w.message.includes('FAILURE'));
+    const criticalSet = new Set(criticals);
+    const warns = yearWarnings.filter(w => !criticalSet.has(w) && w.message.includes('WARNING'));
+    const alerts = yearWarnings.filter(w => !criticalSet.has(w) && !w.message.includes('WARNING'));
+
+    infoPopupYear.innerText = currentYear.toString();
+    infoPopupBody.innerHTML = '';
+
+    if (yearWarnings.length === 0) {
+        infoPopupBody.innerHTML = '<div class="log-empty">NO ANOMALIES DETECTED THIS YEAR.</div>';
+    } else {
+        const sections: [string, typeof yearWarnings, string][] = [
+            ['ALERT', alerts, 'alert'],
+            ['WARNING', warns, 'warning'],
+            ['CRITICAL', criticals, 'critical'],
+        ];
+        for (const [label, entries, cls] of sections) {
+            if (entries.length === 0) continue;
+            const section = document.createElement('div');
+            section.className = `log-section log-section-${cls}`;
+            const sectionLabel = document.createElement('div');
+            sectionLabel.className = 'log-section-label';
+            sectionLabel.innerText = label;
+            section.appendChild(sectionLabel);
+            entries.forEach(w => {
+                const entry = document.createElement('div');
+                entry.className = `log-entry log-${cls}`;
+                entry.innerText = w.message;
+                section.appendChild(entry);
+            });
+            infoPopupBody.appendChild(section);
+        }
+    }
+
+    notifInfoDot.style.display = 'none';
+    infoOverlay.style.display = 'block';
+    infoPopupEl.style.display = 'block';
+    isPaused = true;
+    pauseIndicator.style.display = 'flex';
+    isInternalUnlock = true;
+    Object.keys(moveState).forEach(k => (moveState as any)[k] = false);
+    controls.unlock();
+}
+
+function closeInfoPopup() {
+    infoPopupEl.style.display = 'none';
+    infoOverlay.style.display = 'none';
+    isPaused = false;
+    pauseIndicator.style.display = 'none';
+    controls.lock();
 }
 
 function showTutorialStep(index: number) {
@@ -508,10 +574,21 @@ function renderBingoBook() {
 
 function renderMissionChart(speciesId: string | 'total', title: string, color: string) {
     if (missionChart) missionChart.destroy();
-    
+    if (chartPulseRaf !== null) { cancelAnimationFrame(chartPulseRaf); chartPulseRaf = null; }
+
+    // Remove stale key handler from a previous chart render
+    if (chartKeyHandler) {
+        window.removeEventListener('keydown', chartKeyHandler, true);
+        chartKeyHandler = null;
+    }
+
+    // Clear any leftover alert panel / hint from a previous chart render
+    document.getElementById('chart-alert-panel')?.remove();
+    document.getElementById('chart-arrow-hint')?.remove();
+
     const years = populations.map(p => p.year);
     let data: number[] = [];
-    
+
     if (speciesId === 'total') {
         const totalPopulations = populations.map(p => Object.values(p.counts).reduce((a, b) => a + b, 0));
         const initialTotal = totalPopulations[0] || 1;
@@ -522,29 +599,95 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
         data = speciesHistory.map(v => (v / initialCount) * 100);
     }
 
+    const yMax = Math.ceil(Math.max(...data) / 10) * 10 + 10;
+
     activeSpeciesTitle.innerText = `${title.toUpperCase()} TREND (2013-2026)`;
     
     // Find discovery point for this species if it exists
     const discovery = discoveryLog.find(d => d.id === speciesId);
-    
-    const ctx = (document.getElementById('population-chart') as HTMLCanvasElement).getContext('2d')!;
+
+    // Only ALERT messages (not WARNING or CRITICAL)
+    const alertsByYear = new Map<number, string[]>();
+    warnings.forEach(w => {
+        if (!w.message.startsWith('ALERT')) return;
+        if (!alertsByYear.has(w.year)) alertsByYear.set(w.year, []);
+        alertsByYear.get(w.year)!.push(w.message);
+    });
+
+    const alertIndices = years.map((y, i) => alertsByYear.has(y) ? i : -1).filter(i => i !== -1);
+    let activeAlertIdx: number | null = null;
+
+    const eventData: (number | null)[] = years.map((y, i) => alertsByYear.has(y) ? data[i] : null);
+    const eventRadii = years.map(y => alertsByYear.has(y) ? 7 : 0);
+
+    const crosshairPlugin = { id: 'crosshair' };
+
+    // Glow plugin — redraws alert circles with pulsing canvas shadowBlur on top
+    const glowPlugin = {
+        id: 'alertGlow',
+        afterDatasetsDraw(chart: any) {
+            const meta = chart.getDatasetMeta(1);
+            if (!meta?.data) return;
+            const c = chart.ctx;
+            alertIndices.forEach(dataIdx => {
+                const el = meta.data[dataIdx];
+                if (!el) return;
+                c.save();
+                // Outer soft halo
+                c.shadowColor = '#ff4444';
+                c.shadowBlur = 20;
+                c.beginPath();
+                c.arc(el.x, el.y, 7, 0, Math.PI * 2);
+                c.strokeStyle = 'rgba(255, 68, 68, 0.7)';
+                c.lineWidth = 2;
+                c.stroke();
+                // Inner bright ring
+                c.shadowBlur = 10;
+                c.beginPath();
+                c.arc(el.x, el.y, 7, 0, Math.PI * 2);
+                c.strokeStyle = '#ff4444';
+                c.lineWidth = 1.5;
+                c.stroke();
+                c.restore();
+            });
+        }
+    };
+
+    const canvas = document.getElementById('population-chart') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
     missionChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: years,
-            datasets: [{
-                label: title,
-                data: data,
-                borderColor: color,
-                backgroundColor: color.replace(')', ', 0.1)').replace('rgb', 'rgba'),
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4,
-                pointRadius: years.map(y => discovery && y === discovery.year ? 8 : 0),
-                pointBackgroundColor: '#fff',
-                pointBorderColor: color,
-                pointBorderWidth: 3
-            }]
+            datasets: [
+                {
+                    label: title,
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: color.replace(')', ', 0.1)').replace('rgb', 'rgba'),
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: years.map(y => discovery && y === discovery.year ? 8 : 0),
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: color,
+                    pointBorderWidth: 3,
+                    order: 2,
+                },
+                {
+                    label: 'Alerts',
+                    data: eventData,
+                    showLine: false,
+                    pointRadius: eventRadii,
+                    pointHoverRadius: years.map(y => alertsByYear.has(y) ? 9 : 0),
+                    pointBackgroundColor: 'transparent',
+                    pointHoverBackgroundColor: '#ff4444',
+                    pointBorderColor: '#ff4444',
+                    pointHoverBorderColor: '#ff4444',
+                    pointBorderWidth: 2,
+                    order: 1,
+                } as any,
+            ]
         },
         options: {
             responsive: true,
@@ -552,20 +695,133 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
             scales: {
                 y: {
                     title: { display: true, text: '% OF 2013 POPULATION', color: '#88bbcc', font: { family: 'Share Tech Mono', size: 10 } },
-                    beginAtZero: true,                    max: 120,
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
-                    ticks: { color: '#88bbcc', font: { family: 'Share Tech Mono' } } 
+                    beginAtZero: true,
+                    max: yMax,
+                    grid: {
+                        color: (ctx: any) => ctx.tick.value === 25 ? 'rgba(255, 68, 68, 0.35)' : 'rgba(255, 255, 255, 0.05)',
+                        lineWidth: (ctx: any) => ctx.tick.value === 25 ? 1.5 : 1,
+                    },
+                    ticks: {
+                        color: (ctx: any) => ctx.tick.value === 25 ? '#ff8888' : '#88bbcc',
+                        font: { family: 'Share Tech Mono' }
+                    }
                 },
-                x: { 
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
-                    ticks: { color: '#88bbcc', font: { family: 'Share Tech Mono' } } 
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#88bbcc', font: { family: 'Share Tech Mono' } }
                 }
             },
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: { enabled: false }
             }
-        }
+        },
+        plugins: [crosshairPlugin, glowPlugin]
     });
+
+    // Floating alert panel — created inside .chart-container so absolute coords align
+    const container = canvas.parentElement!;
+    const alertPanel = document.createElement('div');
+    alertPanel.id = 'chart-alert-panel';
+    alertPanel.className = 'chart-alert-panel';
+    container.appendChild(alertPanel);
+
+    // Top-right hint badge (only shown when alertIndices is non-empty)
+    const arrowHint = document.createElement('div');
+    arrowHint.id = 'chart-arrow-hint';
+    arrowHint.className = 'chart-arrow-hint';
+    arrowHint.innerHTML = `<span class="chart-arrow-hint-key">→</span><span class="chart-arrow-hint-text">PRESS TO VIEW ALERTS</span>`;
+    arrowHint.style.display = alertIndices.length > 0 ? 'flex' : 'none';
+    container.appendChild(arrowHint);
+
+    // Hide hint once user opens an alert
+    const hideHint = () => { arrowHint.style.display = 'none'; };
+
+    // Pointer cursor when hovering an alert circle
+    canvas.onmousemove = (e: MouseEvent) => {
+        const points = missionChart!.getElementsAtEventForMode(e, 'point', { intersect: true }, true);
+        canvas.style.cursor = points.some(p => (p as any).datasetIndex === 1) ? 'pointer' : 'default';
+    };
+
+    // Helper: render panel at a given data index
+    const showAlertAtDataIndex = (dataIdx: number) => {
+        const meta = missionChart!.getDatasetMeta(1);
+        const el = meta.data[dataIdx] as any;
+        const year = years[dataIdx];
+        const msgs = alertsByYear.get(year)!;
+        activeAlertIdx = alertIndices.indexOf(dataIdx);
+        const pos = `${activeAlertIdx + 1} / ${alertIndices.length}`;
+        hideHint();
+
+        alertPanel.innerHTML = `
+            <div class="chart-alert-close">×</div>
+            <div class="chart-alert-year">YEAR ${year}</div>
+            ${msgs.map((m: string) => `<div class="chart-alert-msg">${m}</div>`).join('')}
+            <div class="chart-alert-nav-hint">
+                <button class="chart-alert-nav-btn" id="chart-nav-prev">←</button>
+                <span class="chart-alert-nav-pos">${pos}</span>
+                <button class="chart-alert-nav-btn" id="chart-nav-next">→</button>
+            </div>
+        `;
+        alertPanel.style.left = `${el.x}px`;
+        alertPanel.style.top = `${el.y}px`;
+        alertPanel.style.display = 'block';
+
+        alertPanel.querySelector('.chart-alert-close')!.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            alertPanel.style.display = 'none';
+            activeAlertIdx = null;
+        });
+
+        alertPanel.querySelector('#chart-nav-prev')!.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const total = alertIndices.length;
+            activeAlertIdx = ((activeAlertIdx ?? 0) - 1 + total) % total;
+            showAlertAtDataIndex(alertIndices[activeAlertIdx]);
+        });
+
+        alertPanel.querySelector('#chart-nav-next')!.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const total = alertIndices.length;
+            activeAlertIdx = ((activeAlertIdx ?? 0) + 1) % total;
+            showAlertAtDataIndex(alertIndices[activeAlertIdx]);
+        });
+    };
+
+    // Click opens alert panel
+    canvas.onclick = (e: MouseEvent) => {
+        const points = missionChart!.getElementsAtEventForMode(e, 'point', { intersect: true }, true);
+        const hit = points.find(p => (p as any).datasetIndex === 1);
+        if (!hit) {
+            alertPanel.style.display = 'none';
+            activeAlertIdx = null;
+            return;
+        }
+        showAlertAtDataIndex((hit as any).index);
+    };
+
+    // Arrow-key navigation between alert circles (capture phase beats global handler)
+    chartKeyHandler = (e: KeyboardEvent) => {
+        if (e.code !== 'ArrowLeft' && e.code !== 'ArrowRight') return;
+        if (alertIndices.length === 0) return;
+        // If panel closed, right arrow opens the first alert
+        if (alertPanel.style.display !== 'block' || activeAlertIdx === null) {
+            if (e.code !== 'ArrowRight') return;
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            showAlertAtDataIndex(alertIndices[0]);
+            return;
+        }
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        const total = alertIndices.length;
+        activeAlertIdx = e.code === 'ArrowRight'
+            ? (activeAlertIdx + 1) % total
+            : (activeAlertIdx - 1 + total) % total;
+        showAlertAtDataIndex(alertIndices[activeAlertIdx]);
+    };
+    window.addEventListener('keydown', chartKeyHandler, true);
+
 }
 
 function showEndgameStats() {
@@ -821,6 +1077,9 @@ function updateYear(year: number) {
     applyDataToWorld(pH, temp);
     syncPopulations(year);
 
+    // Update info-dot signifier
+    notifInfoDot.style.display = warnings.some(w => w.year === year) ? 'block' : 'none';
+
     // Narrative Warnings
     const currentYearWarnings = warnings.filter(w => w.year === year);
     currentYearWarnings.forEach((warning) => {
@@ -934,6 +1193,11 @@ controls.addEventListener('unlock', () => {
     }
 
     // 1. If a submenu was open, just hide it (user pressed Esc to leave)
+    if (infoPopupEl.style.display === 'block') {
+        closeInfoPopup();
+        return;
+    }
+
     if (fishPopup.style.display === 'block') {
         fishPopup.style.display = 'none';
         if (bingoBookEl.style.display !== 'block') {
@@ -1001,6 +1265,16 @@ document.addEventListener('keydown', (event) => {
         toggleBingoBook();
         return;
     }
+    if (event.code === 'KeyI') {
+        event.preventDefault();
+        if (event.repeat) return;
+        if (infoPopupEl.style.display === 'block') {
+            closeInfoPopup();
+        } else {
+            openInfoPopup();
+        }
+        return;
+    }
     // Remove manual Escape handling entirely - rely on 'unlock' listener
     
     switch (event.code) {
@@ -1057,6 +1331,10 @@ document.addEventListener('keyup', (event) => {
 
 yearSlider.addEventListener('click', (e) => e.stopPropagation());
 yearSlider.addEventListener('input', (e) => updateYear(parseInt((e.target as HTMLInputElement).value)));
+infoPopupClose.addEventListener('click', (e) => { e.stopPropagation(); closeInfoPopup(); });
+infoPopupEl.addEventListener('click', (e) => e.stopPropagation());
+infoOverlay.addEventListener('click', () => closeInfoPopup());
+infoTrigger.addEventListener('click', (e) => { e.stopPropagation(); openInfoPopup(); });
 popupClose.addEventListener('click', (e) => { e.stopPropagation(); closeFishPopup(); });
 fishPopup.addEventListener('click', (e) => e.stopPropagation());
 bingoTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleBingoBook(); });
@@ -1079,7 +1357,8 @@ window.addEventListener('mousemove', (event) => {
 window.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
     if (bingoBookEl.style.display === 'block') return;
-    if (fishPopup.style.display === 'block') return; // Prevent clicking through popup
+    if (fishPopup.style.display === 'block') return;
+    if (infoPopupEl.style.display === 'block') return;
     if (!controls.isLocked && !isPaused) return; 
 
     raycaster.setFromCamera(mouse, camera);

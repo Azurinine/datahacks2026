@@ -65,6 +65,14 @@
   },
   {
     "year": 2017,
+    "message": "ALERT: El Niño conditions are accelerating habitat loss across the Channel Islands ecosystem."
+  },
+  {
+    "year": 2017,
+    "message": "WARNING: Residual thermal stress from the 2015-2016 El Niño persists. Elevated ocean temperatures are driving cold-water species out of surveyed ranges."
+  },
+  {
+    "year": 2017,
     "message": "CRITICAL: PARAGORGIA is close to extinction!"
   },
   {
@@ -117,6 +125,14 @@
   },
   {
     "year": 2021,
+    "message": "CRITICAL: Survey gap detected — 2020 monitoring programs were suspended. Compounded by 2019-2020 Northeast Pacific marine heatwave. Species richness down 90% from 2019 peak."
+  },
+  {
+    "year": 2021,
+    "message": "WARNING: Marine heatwave residuals from 2019-2020 have restructured deep-water communities. Many cold-adapted species have not returned to surveyed areas."
+  },
+  {
+    "year": 2021,
     "message": "WARNING: Black Coral and Bubblegum Coral reached bleaching threshold. Vitality dropping."
   },
   {
@@ -129,11 +145,11 @@
   },
   {
     "year": 2022,
-    "message": "ALERT: Major decline in overall fish biomass detected. System instability rising."
+    "message": "WARNING: PENNATULOIDEA population has crashed."
   },
   {
-    "year": 2022,
-    "message": "WARNING: PENNATULOIDEA population has crashed."
+    "year": 2023,
+    "message": "ALERT: Northeast Pacific marine heatwave detected. Thermal tolerance limits exceeded for multiple deep-water species in this region."
   },
   {
     "year": 2023,
