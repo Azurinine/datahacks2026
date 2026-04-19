@@ -78,6 +78,7 @@ const controls = new PointerLockControls(camera, document.body);
 const instructions = document.getElementById('instructions')!;
 const yearSlider = document.getElementById('year-slider') as HTMLInputElement;
 const yearValue = document.getElementById('year-value')!;
+const brightnessSlider = document.getElementById('brightness-slider') as HTMLInputElement;
 const fishPopup = document.getElementById('fish-popup')!;
 const fishNameEl = document.getElementById('fish-name')!;
 const fishDescEl = document.getElementById('fish-desc')!;
@@ -91,6 +92,8 @@ const pauseIndicator = document.getElementById('pause-indicator')!;
 let isPaused = false;
 let previewDispose: (() => void) | null = null;
 let bingoPreviewDisposes: (() => void)[] = [];
+let headlightOn = true;
+let blurEnabled = true;
 let isInternalUnlock = false; // Flag to skip next unlock event
 let prevTime = performance.now();
 let lastUIActionTime = 0; // Cooldown for UI toggles
@@ -102,6 +105,7 @@ const direction = new THREE.Vector3();
 
 // Data State
 let populations: PopulationYear[] = [];
+let envByYear: { [year: number]: { avg_ph: number; avg_temp: number; vitality: number } } = {};
 let coralMetadata: any[] = [];
 let discoveredSpecies = new Set<string>(JSON.parse(localStorage.getItem('discoveredSpecies') || '[]'));
 let fishConfigs: any[] = [];
@@ -263,12 +267,13 @@ function applyDataToWorld(pH: number, temp: number) {
 }
 
 function updateYear(year: number) {
-    yearSlider.value = year.toString(); 
+    yearSlider.value = year.toString();
     yearValue.innerText = year.toString();
-    const yearsPassed = year - 2014;
-    const simulatedPH = 8.1 - (yearsPassed * 0.04);
-    const simulatedTemp = 10.0 + (yearsPassed * 0.15);
-    applyDataToWorld(simulatedPH, simulatedTemp);
+    const env = envByYear[year];
+    const pH = env ? env.avg_ph : 8.1 - (year - 2014) * 0.04;
+    const temp = env ? env.avg_temp : 10.0 + (year - 2014) * 0.15;
+    const vitality = env ? env.vitality : 1.0;
+    applyDataToWorld(pH, temp, vitality);
     syncPopulations(year);
 
     const greyColor = new THREE.Color(0xcccccc);
@@ -348,6 +353,8 @@ document.addEventListener('keydown', (event) => {
         case 'Space': moveState.up = true; break;
         case 'ShiftLeft':
         case 'ShiftRight': moveState.down = true; break;
+        case 'KeyF': headlightOn = !headlightOn; headlight.visible = headlightOn; headlightBeam.visible = headlightOn; break;
+        case 'KeyB': blurEnabled = !blurEnabled; blurPass.enabled = blurEnabled; break;
         case 'KeyP': isPaused = !isPaused; pauseIndicator.style.display = isPaused ? 'flex' : 'none'; break;
     }
     const curYear = parseInt(yearSlider.value);
@@ -367,6 +374,8 @@ document.addEventListener('keyup', (event) => {
     }
 });
 
+brightnessSlider.addEventListener('input', (e) => updateBrightness(parseFloat((e.target as HTMLInputElement).value)));
+brightnessSlider.addEventListener('click', (e) => e.stopPropagation());
 yearSlider.addEventListener('click', (e) => e.stopPropagation());
 yearSlider.addEventListener('input', (e) => updateYear(parseInt((e.target as HTMLInputElement).value)));
 popupClose.addEventListener('click', (e) => { e.stopPropagation(); closeFishPopup(); });
@@ -385,8 +394,8 @@ window.addEventListener('mousemove', (event) => {
 window.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
     if (bingoBookEl.style.display === 'block') return;
-    if (fishPopup.style.display === 'block') return;
-    if (!controls.isLocked) return; 
+    if (fishPopup.style.display === 'block') return; // Prevent clicking through popup
+    if (!controls.isLocked && !isPaused) return; 
 
     raycaster.setFromCamera(mouse, camera);
     const fishIntersects = raycaster.intersectObject(assets.fishHitboxMesh);
@@ -524,13 +533,15 @@ function animate() {
 }
 
 async function init() {
-    const [popData, coralReg, fishMeta] = await Promise.all([
+    const [popData, coralReg, fishMeta, envData] = await Promise.all([
         fetch('/data/populations.json').then(res => res.json()),
         fetch('/data/coral_registry.json').then(res => res.json()),
-        fetch('/data/fish_metadata.json').then(res => res.json())
+        fetch('/data/fish_metadata.json').then(res => res.json()),
+        fetch('/data/env_by_year.json').then(res => res.json())
     ]);
 
     populations = popData;
+    envByYear = Object.fromEntries(envData.map((e: any) => [e.year, { avg_ph: e.avg_ph, avg_temp: e.avg_temp, vitality: e.vitality }]));
     coralMetadata = coralReg;
     fishConfigs = fishMeta.map((f: any) => ({
         ...f,
