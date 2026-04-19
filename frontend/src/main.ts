@@ -390,6 +390,7 @@ function showPopup(id: string, title: string, desc: string, isManualScan: boolea
         if (notifNewEl) {
             notifNewEl.style.display = 'flex';
             notifNewEl.innerText = newCount.toString();
+            triggerNotificationAnim(notifNewEl);
         }
     }
 }
@@ -778,6 +779,17 @@ function addChatMessage(msg: string, type: 'info' | 'warning' | 'critical' = 'in
     }, 10000);
 }
 
+function triggerNotificationAnim(el: HTMLElement) {
+    el.classList.remove('badge-bounce');
+    void el.offsetWidth; // Trigger reflow
+    el.classList.add('badge-bounce');
+    
+    // Also bounce the main trigger panel
+    bingoTrigger.classList.remove('trigger-bounce');
+    void bingoTrigger.offsetWidth;
+    bingoTrigger.classList.add('trigger-bounce');
+}
+
 function updateYear(year: number) {
     currentYear = year;
     timeInYear = 0; // Reset progression timer on any change
@@ -822,10 +834,12 @@ function updateYear(year: number) {
             criticalCount++;
             notifCriticalEl.style.display = 'flex';
             notifCriticalEl.innerText = criticalCount.toString();
+            triggerNotificationAnim(notifCriticalEl);
         } else if (isWarning) {
             warningCount++;
             notifWarningEl.style.display = 'flex';
             notifWarningEl.innerText = warningCount.toString();
+            triggerNotificationAnim(notifWarningEl);
         } else {
             // General info still goes to chat
             setTimeout(() => addChatMessage(warning.message, 'info'), idx * 800);

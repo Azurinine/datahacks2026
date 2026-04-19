@@ -235,7 +235,7 @@ body {
 
 /* Panels */
 .panel-header {
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 4px;
     color: var(--primary);
@@ -253,7 +253,7 @@ body {
     position: absolute;
     top: 40px;
     left: 40px;
-    width: 250px;
+    width: 320px;
 }
 
 .stat-row {
@@ -265,7 +265,7 @@ body {
 }
 
 .stat-label { 
-    font-size: 12px; 
+    font-size: 15px; 
     color: var(--text-muted); 
     font-weight: 600; 
     letter-spacing: 1.5px;
@@ -274,7 +274,7 @@ body {
 
 .stat-value { 
     font-family: 'Share Tech Mono', monospace;
-    font-size: 16px; 
+    font-size: 20px; 
     color: var(--text-main); 
 }
 
@@ -292,7 +292,7 @@ body {
     position: absolute;
     top: 40px;
     right: 40px;
-    width: 260px;
+    width: 340px;
 }
 
 .divider-sm {
@@ -302,17 +302,17 @@ body {
     opacity: 0.5;
 }
 
-/* Bingo Book Floating Trigger (Relocated to Top Left) */
+/* Bingo Book Floating Trigger (Moved to bottom left above chat) */
 #bingo-trigger {
     position: absolute;
-    top: 220px; /* Positioned below the stats panel */
+    bottom: 420px; /* Above the scaled chat */
     left: 40px;
     display: flex;
     align-items: center;
     gap: 15px;
     background: var(--bg-panel);
     border: 1px solid var(--border-color);
-    padding: 15px 25px;
+    padding: 20px 30px;
     border-radius: 12px;
     cursor: pointer;
     z-index: 300;
@@ -325,27 +325,27 @@ body {
 #bingo-trigger:hover {
     background: rgba(45, 212, 191, 0.1);
     border-color: var(--primary);
-    transform: translateY(-3px);
+    transform: translateY(-5px);
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 15px rgba(45, 212, 191, 0.2);
 }
 
 .bingo-notifications {
     position: absolute;
-    top: -10px;
-    right: -10px;
+    top: -12px;
+    right: -12px;
     display: flex;
-    gap: 6px;
+    gap: 8px;
     z-index: 10;
 }
 
 .bingo-badge {
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 800;
     color: #020617;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
@@ -369,6 +369,30 @@ body {
 @keyframes badgePop {
     from { transform: scale(0); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes badgeBounce {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.4); }
+    50% { transform: scale(0.9); }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.badge-bounce {
+    animation: badgeBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes triggerBounce {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.05); }
+    50% { transform: scale(0.98); }
+    70% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+.trigger-bounce {
+    animation: triggerBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .trigger-label {
@@ -465,7 +489,7 @@ body {
 }
 
 #year-display {
-    font-size: 22px;
+    font-size: 28px;
     font-weight: 700;
     letter-spacing: 4px;
     margin-bottom: 20px;
@@ -474,7 +498,7 @@ body {
 
 #year-display .highlight {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 28px;
+    font-size: 36px;
     color: var(--primary);
     text-shadow: var(--glow);
     margin-left: 10px;
@@ -575,8 +599,8 @@ body {
     position: absolute;
     bottom: 40px;
     left: 40px;
-    width: 450px;
-    max-height: 250px;
+    width: 550px;
+    max-height: 350px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -588,9 +612,9 @@ body {
 
 .chat-msg {
     background: rgba(0, 0, 0, 0.5);
-    padding: 4px 10px;
+    padding: 6px 12px;
     font-family: 'Share Tech Mono', monospace;
-    font-size: 14px;
+    font-size: 18px;
     line-height: 1.4;
     text-shadow: 1px 1px 1px #000;
     animation: chatIn 0.2s ease-out;
@@ -647,7 +671,7 @@ input[type=range]::-webkit-slider-thumb:hover {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 380px;
+    width: 450px;
     display: none;
     z-index: 1000;
     text-align: center;
@@ -701,7 +725,7 @@ input[type=range]::-webkit-slider-thumb:hover {
 
 #fish-popup h2 {
     margin: 15px 0 10px 0;
-    font-size: 28px;
+    font-size: 32px;
     color: var(--text-main);
     letter-spacing: 4px;
     text-shadow: 0 0 15px rgba(var(--popup-accent-rgb), 0.3);
@@ -709,11 +733,11 @@ input[type=range]::-webkit-slider-thumb:hover {
 }
 
 #fish-popup p {
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.6;
     color: var(--text-muted);
     margin: 0 0 20px 0;
-    padding: 0 15px;
+    padding: 0 20px;
 }
 
 #popup-close {
@@ -764,17 +788,17 @@ input[type=range]::-webkit-slider-thumb:hover {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 85%;
-    max-width: 1000px;
-    height: 80%;
+    width: 95%;
+    max-width: 1600px;
+    height: 90%;
     display: none;
     z-index: 900;
     overflow-y: auto;
     border: 1px solid var(--border-color);
     background: rgba(15, 23, 42, 0.95);
-    padding: 40px;
-    border-radius: 16px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    padding: 60px;
+    border-radius: 20px;
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8);
 }
 
 /* Custom Scrollbar for Bingo Book */
@@ -785,14 +809,14 @@ input[type=range]::-webkit-slider-thumb:hover {
 
 #bingo-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 24px;
     padding: 10px 0;
 }
 
 .bingo-category-header {
     grid-column: 1 / -1;
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--primary);
     letter-spacing: 4px;
@@ -910,7 +934,7 @@ input[type=range]::-webkit-slider-thumb:hover {
 }
 
 .bingo-label {
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 600;
     letter-spacing: 1.5px;
     color: var(--text-muted);

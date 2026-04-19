@@ -142,7 +142,7 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
 
     // --- Geography ---
     const geographyGroup = new THREE.Group();
-    const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x3a4b4c, roughness: 1.0, flatShading: true });
+    const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9, flatShading: true });
     const rockSpheres: { center: THREE.Vector3, radius: number }[] = [];
     const rockGeometries: THREE.BufferGeometry[] = [];
 
