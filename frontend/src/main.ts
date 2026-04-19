@@ -88,6 +88,7 @@ const controls = new PointerLockControls(camera, document.body);
 const instructions = document.getElementById('instructions')!;
 const yearSlider = document.getElementById('year-slider') as HTMLInputElement;
 const yearValue = document.getElementById('year-value')!;
+const brightnessSlider = document.getElementById('brightness-slider') as HTMLInputElement;
 const fishPopup = document.getElementById('fish-popup')!;
 const fishNameEl = document.getElementById('fish-name')!;
 const fishDescEl = document.getElementById('fish-desc')!;
@@ -110,6 +111,8 @@ let gameEnded = false;
 let missionChart: Chart | null = null;
 let previewDispose: (() => void) | null = null;
 let bingoPreviewDisposes: (() => void)[] = [];
+let headlightOn = true;
+let blurEnabled = true;
 let isInternalUnlock = false; // Flag to skip next unlock event
 let prevTime = performance.now();
 let lastUIActionTime = 0; // Cooldown for UI toggles
@@ -130,6 +133,7 @@ const direction = new THREE.Vector3();
 
 // Data State
 let populations: PopulationYear[] = [];
+let envByYear: { [year: number]: { avg_ph: number; avg_temp: number; vitality: number } } = {};
 let coralMetadata: any[] = [];
 let discoveryLog: Discovery[] = JSON.parse(localStorage.getItem('discoveryLog') || '[]');
 let discoveredSpecies = new Set<string>(discoveryLog.map(d => d.id));
@@ -153,8 +157,14 @@ const mouse = new THREE.Vector2();
 // 2. HELPER FUNCTIONS
 // ==========================================
 
-headlight.intensity = 100;
-beamMaterial.uniforms.opacity.value = 0.4;
+const initialBrightness = parseFloat(brightnessSlider.value);
+headlight.intensity = initialBrightness * 80;
+beamMaterial.uniforms.opacity.value = 0.1 + (initialBrightness / 3) * 0.4;
+
+function updateBrightness(val: number) {
+    headlight.intensity = val * 80; // Scale 0-3 to meaningful light intensity
+    beamMaterial.uniforms.opacity.value = 0.1 + (val / 3) * 0.4;
+}
 
 function closeFishPopup() {
     if (previewDispose) { previewDispose(); previewDispose = null; }
@@ -514,15 +524,14 @@ function addChatMessage(msg: string, type: 'info' | 'warning' | 'critical' = 'in
 function updateYear(year: number) {
     currentYear = year;
     timeInYear = 0; // Reset progression timer on any change
+    yearSlider.value = year.toString(); 
     yearValue.innerText = year.toString();
-    if (yearSlider) yearSlider.value = year.toString();
-    const progress = (year - 2014) / (2026 - 2014) * 100;
-    if (yearProgressFill) yearProgressFill.style.width = `${progress}%`;
-
-    const yearsPassed = year - 2014;
-    const simulatedPH = 8.1 - (yearsPassed * 0.04);
-    const simulatedTemp = 10.0 + (yearsPassed * 0.15);
-    applyDataToWorld(simulatedPH, simulatedTemp);
+    
+    const env = envByYear[year];
+    const pH = env ? env.avg_ph : 8.1 - (year - 2014) * 0.04;
+    const temp = env ? env.avg_temp : 10.0 + (year - 2014) * 0.15;
+    
+    applyDataToWorld(pH, temp);
     syncPopulations(year);
 
     // Narrative Warnings
@@ -642,6 +651,8 @@ document.addEventListener('keydown', (event) => {
         case 'Space': moveState.up = true; break;
         case 'ShiftLeft':
         case 'ShiftRight': moveState.down = true; break;
+        case 'KeyF': headlightOn = !headlightOn; headlight.visible = headlightOn; headlightBeam.visible = headlightOn; break;
+        case 'KeyB': blurEnabled = !blurEnabled; blurPass.enabled = blurEnabled; break;
         case 'KeyP': isPaused = !isPaused; pauseIndicator.style.display = isPaused ? 'flex' : 'none'; break;
         case 'ArrowRight':
         case 'ArrowUp':
@@ -669,6 +680,8 @@ document.addEventListener('keyup', (event) => {
     }
 });
 
+brightnessSlider.addEventListener('input', (e) => updateBrightness(parseFloat((e.target as HTMLInputElement).value)));
+brightnessSlider.addEventListener('click', (e) => e.stopPropagation());
 yearSlider.addEventListener('click', (e) => e.stopPropagation());
 yearSlider.addEventListener('input', (e) => updateYear(parseInt((e.target as HTMLInputElement).value)));
 popupClose.addEventListener('click', (e) => { e.stopPropagation(); closeFishPopup(); });
@@ -692,8 +705,8 @@ window.addEventListener('mousemove', (event) => {
 window.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
     if (bingoBookEl.style.display === 'block') return;
-    if (fishPopup.style.display === 'block') return;
-    if (!controls.isLocked) return; 
+    if (fishPopup.style.display === 'block') return; // Prevent clicking through popup
+    if (!controls.isLocked && !isPaused) return; 
 
     raycaster.setFromCamera(mouse, camera);
     const fishIntersects = raycaster.intersectObject(assets.fishHitboxMesh);
@@ -860,14 +873,16 @@ function animate() {
 }
 
 async function init() {
-    const [popData, coralReg, fishMeta, warningsData] = await Promise.all([
+    const [popData, coralReg, fishMeta, warningsData, envData] = await Promise.all([
         fetch('/data/populations.json').then(res => res.json()),
         fetch('/data/coral_registry.json').then(res => res.json()),
         fetch('/data/fish_metadata.json').then(res => res.json()),
-        fetch('/data/warnings.json').then(res => res.json())
+        fetch('/data/warnings.json').then(res => res.json()),
+        fetch('/data/env_by_year.json').then(res => res.json())
     ]);
 
     populations = popData;
+    envByYear = Object.fromEntries(envData.map((e: any) => [e.year, { avg_ph: e.avg_ph, avg_temp: e.avg_temp, vitality: e.vitality }]));
     coralMetadata = coralReg;
     warnings = warningsData;
     fishConfigs = fishMeta.map((f: any) => ({
