@@ -175,24 +175,84 @@ beamMaterial.uniforms.opacity.value = 0.4;
 function closeFishPopup() {
     if (previewDispose) { previewDispose(); previewDispose = null; }
     fishPopup.style.display = 'none';
-    isPaused = false;
-    pauseIndicator.style.display = 'none';
-    controls.lock(); // Re-lock immediately
+    
+    // Fix: Only unpause if Bingo Book is not open
+    if (bingoBookEl.style.display !== 'block') {
+        isPaused = false;
+        pauseIndicator.style.display = 'none';
+        controls.lock(); // Re-lock immediately
+    }
 }
 
-function showPopup(id: string, title: string, desc: string) {
+function showPopup(id: string, title: string, desc: string, isManualScan: boolean = false) {
     lastUIActionTime = performance.now();
-    fishNameEl.innerText = title;
+    
+    const isActuallyDiscovered = discoveredSpecies.has(id);
+    const isNewDiscoveryNow = isManualScan && !isActuallyDiscovered;
+    const isUndiscoveredPreview = !isActuallyDiscovered && !isManualScan;
+    
+    const fishPopupEl = document.getElementById('fish-popup')!;
+    const statsContainer = document.getElementById('popup-stats')!;
+    
+    // Set theme and title
+    if (isNewDiscoveryNow) {
+        fishPopupEl.className = 'hud-panel popup-new';
+        fishNameEl.innerText = "NEW SPECIES DETECTED";
+        statsContainer.innerHTML = '<div class="new-discovery-msg">BIOLOGICAL SIGNATURE ARCHIVED</div>';
+    } else if (isUndiscoveredPreview) {
+        fishPopupEl.className = 'hud-panel popup-found'; // Use blue theme for previews
+        fishNameEl.innerText = "UNIDENTIFIED SPECIES";
+        
+        const currentYearPop = populations.find(p => p.year === currentYear);
+        const currentCount = currentYearPop ? (currentYearPop.counts[id] || 0) : 0;
+        
+        statsContainer.innerHTML = `
+            <div class="stat-item"><span class="label">STATUS</span><span class="value">UNIDENTIFIED</span></div>
+            <div class="stat-item"><span class="label">ESTIMATED POPULATION</span><span class="value">${currentCount}</span></div>
+        `;
+        desc = "A biological signature has been detected in the ecosystem, but its taxonomy remains unverified. Scan the specimen in the wild to archive full ecological data.";
+    } else {
+        fishPopupEl.className = 'hud-panel popup-found';
+        fishNameEl.innerText = title;
+        
+        // Calculate historical stats
+        const discovery = discoveryLog.find(d => d.id === id);
+        const currentYearPop = populations.find(p => p.year === currentYear);
+        const currentCount = currentYearPop ? (currentYearPop.counts[id] || 0) : 0;
+        
+        if (discovery) {
+            const percentChange = discovery.count > 0 
+                ? (((currentCount - discovery.count) / discovery.count) * 100).toFixed(1)
+                : "0.0";
+            const changeColor = parseFloat(percentChange) >= 0 ? '#00ff88' : '#ff4444';
+            
+            statsContainer.innerHTML = `
+                <div class="stat-item"><span class="label">YEAR FOUND</span><span class="value">${discovery.year}</span></div>
+                <div class="stat-item"><span class="label">POP AT DISCOVERY</span><span class="value">${discovery.count}</span></div>
+                <div class="stat-item"><span class="label">CURRENT POP</span><span class="value">${currentCount}</span></div>
+                <div class="stat-item"><span class="label">TREND</span><span class="value" style="color: ${changeColor}">${percentChange}%</span></div>
+            `;
+        } else {
+            // Case where species is technically discovered but not in log (shouldn't happen with current logic but good fallback)
+            statsContainer.innerHTML = `
+                <div class="stat-item"><span class="label">STATUS</span><span class="value">ARCHIVED</span></div>
+                <div class="stat-item"><span class="label">CURRENT POP</span><span class="value">${currentCount}</span></div>
+            `;
+        }
+    }
+    
     fishDescEl.innerText = desc;
-    fishPopup.style.display = 'block'; // must be visible before renderer reads canvas size
+    fishPopup.style.display = 'block'; 
     if (previewDispose) { previewDispose(); previewDispose = null; }
     const previewCanvas = document.getElementById('popup-species-canvas') as HTMLCanvasElement;
     
-    // Check coral first to use coral geometry
     const coralCfg = coralMetadata.find(c => c.id === id);
     const fishCfg = fishConfigs.find(f => f.id === id);
     
-    if (coralCfg) {
+    if (isUndiscoveredPreview) {
+        // Show unknown type in preview
+        previewDispose = setupInteractivePreview(previewCanvas, 'unknown', { id: 'unknown', color: '#557788' });
+    } else if (coralCfg) {
         previewDispose = setupInteractivePreview(previewCanvas, 'coral', { id: coralCfg.id, color: coralCfg.color });
     } else if (fishCfg) {
         previewDispose = setupInteractivePreview(previewCanvas, 'fish', fishCfg);
@@ -202,14 +262,11 @@ function showPopup(id: string, title: string, desc: string) {
     pauseIndicator.style.display = 'flex';
     isInternalUnlock = true;
     
-    // Clear move state when opening menu
     Object.keys(moveState).forEach(k => (moveState as any)[k] = false);
     controls.unlock();
     
-    if (!discoveredSpecies.has(id)) {
+    if (isNewDiscoveryNow) {
         discoveredSpecies.add(id);
-        
-        // Find population count for this species in current year
         const currentYearData = populations.find(p => p.year === currentYear);
         const speciesCount = currentYearData ? (currentYearData.counts[id] || 0) : 0;
         
@@ -223,11 +280,10 @@ function showPopup(id: string, title: string, desc: string) {
         });
         
         localStorage.setItem('discoveryLog', JSON.stringify(discoveryLog));
-        needsBingoRender = true; // Mark for re-render
+        needsBingoRender = true;
         newlyDiscoveredSinceLastOpen.add(id);
-        
-        // Green Notification for new discovery
         newCount++;
+        
         if (notifNewEl) {
             notifNewEl.style.display = 'flex';
             notifNewEl.innerText = newCount.toString();
@@ -279,6 +335,12 @@ function renderBingoBook() {
             if (isHalfPop && !isDead) classes += ' half-pop';
             slot.className = classes;
             
+            // Add click listener
+            const speciesDesc = (coralCfg || fishConfigs.find(f => f.id === species.id))?.desc || "No data available.";
+            slot.onclick = () => {
+                showPopup(species.id, species.name, speciesDesc);
+            };
+            
             const icon = document.createElement('div');
             icon.className = 'bingo-icon';
             if (isDiscovered) {
@@ -327,13 +389,6 @@ function renderBingoBook() {
             label.innerText = species.name;
             slot.appendChild(icon);
             slot.appendChild(label);
-
-            if (isDiscovered) {
-                const popDisplay = document.createElement('div');
-                popDisplay.className = `bingo-pop ${isHalfPop ? 'low' : ''}`;
-                popDisplay.innerText = `POP: ${currentCount}`;
-                slot.appendChild(popDisplay);
-            }
 
             bingoGridEl.appendChild(slot);
         });
@@ -489,9 +544,14 @@ function toggleBingoBook() {
         bingoPreviewDisposes = [];
         bingoBookEl.style.display = 'none';
         bingoOverlay.style.display = 'none';
-        isPaused = false;
-        pauseIndicator.style.display = 'none';
-        controls.lock(); // Re-lock immediately
+
+        if (fishPopup.style.display === 'block') {
+            closeFishPopup();
+        } else {
+            isPaused = false;
+            pauseIndicator.style.display = 'none';
+            controls.lock(); // Re-lock immediately
+        }
     } else {
         newCount = 0;
         warningCount = 0;
@@ -656,8 +716,10 @@ controls.addEventListener('unlock', () => {
     // 1. If a submenu was open, just hide it (user pressed Esc to leave)
     if (fishPopup.style.display === 'block') {
         fishPopup.style.display = 'none';
-        isPaused = false;
-        pauseIndicator.style.display = 'none';
+        if (bingoBookEl.style.display !== 'block') {
+            isPaused = false;
+            pauseIndicator.style.display = 'none';
+        }
         return; 
     }
     
@@ -782,7 +844,7 @@ window.addEventListener('pointerdown', (event) => {
                 addChatMessage("SENSORS OFFLINE: SPECIMEN UNRESPONSIVE (BLEACHED)", "warning");
                 return;
             }
-            showPopup(data.id, data.name.toUpperCase(), data.desc);
+            showPopup(data.id, data.name.toUpperCase(), data.desc, true);
             return;
         }
     } else {
@@ -810,7 +872,7 @@ window.addEventListener('pointerdown', (event) => {
                 addChatMessage("SENSORS OFFLINE: NO VITAL SIGNS DETECTED (EXTINCT)", "warning");
                 return;
             }
-            showPopup(config.id, (config.name || targetSpecies).toUpperCase(), config.desc || '');
+            showPopup(config.id, (config.name || targetSpecies).toUpperCase(), config.desc || '', true);
         }
     }
 });
