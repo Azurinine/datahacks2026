@@ -471,7 +471,7 @@ function animate() {
 async function init() {
     const [popData, coralReg, fishMeta] = await Promise.all([
         fetch('/data/populations.json').then(res => res.json()),
-        fetch('/data/corals_registry.json').then(res => res.json()),
+        fetch('/data/coral_registry.json').then(res => res.json()),
         fetch('/data/fish_metadata.json').then(res => res.json())
     ]);
 
