@@ -192,15 +192,15 @@ scene.add(floor);
 
 // Assets
 const fishConfigs = [
-    { id: 'chromis', color: 0x55aaff, count: 300, speedMultiplier: 1.0, scale: 1.0, preferredHeight: 3.0 },
-    { id: 'clownfish', color: 0xffaa55, count: 300, speedMultiplier: 1.2, scale: 0.8, preferredHeight: 2.0 },
-    { id: 'tang', color: 0x55ffaa, count: 300, speedMultiplier: 0.8, scale: 1.2, preferredHeight: 4.0 },
-    { id: 'anthias', color: 0xff55aa, count: 300, speedMultiplier: 1.5, scale: 0.9, preferredHeight: 2.5 },
-    { id: 'garibaldi', color: 0xffa500, count: 300, speedMultiplier: 1.1, scale: 1.3, preferredHeight: 3.5 },
-    { id: 'rockfish', color: 0xff4500, count: 300, speedMultiplier: 0.7, scale: 1.1, preferredHeight: 1.5 },
-    { id: 'sheephead', color: 0x8b0000, count: 300, speedMultiplier: 0.9, scale: 1.5, preferredHeight: 2.0 },
-    { id: 'senorita', color: 0xffff00, count: 300, speedMultiplier: 1.3, scale: 0.7, preferredHeight: 4.5 },
-    { id: 'kelpbass', color: 0x556b2f, count: 300, speedMultiplier: 1.0, scale: 1.2, preferredHeight: 2.5 },
+    { id: 'porifera',      color: 0x55aaff, count: 300, speedMultiplier: 1.0, scale: 1.0, preferredHeight: 3.0 },
+    { id: 'pennatuloidea', color: 0xff55aa, count: 300, speedMultiplier: 1.2, scale: 0.8, preferredHeight: 2.0 },
+    { id: 'ptilosarcus',   color: 0xffaa55, count: 300, speedMultiplier: 0.8, scale: 1.2, preferredHeight: 4.0 },
+    { id: 'suberites',     color: 0xffff00, count: 300, speedMultiplier: 1.5, scale: 0.9, preferredHeight: 2.5 },
+    { id: 'octocorallia',  color: 0xff4500, count: 300, speedMultiplier: 1.1, scale: 1.3, preferredHeight: 3.5 },
+    { id: 'plumarella',    color: 0x55ffaa, count: 300, speedMultiplier: 0.7, scale: 1.1, preferredHeight: 1.5 },
+    { id: 'leptogorgia',   color: 0xff6600, count: 300, speedMultiplier: 0.9, scale: 1.5, preferredHeight: 2.0 },
+    { id: 'acanthogorgia', color: 0xaa55ff, count: 300, speedMultiplier: 1.3, scale: 0.7, preferredHeight: 4.5 },
+    { id: 'paragorgia',    color: 0x8b0000, count: 300, speedMultiplier: 1.0, scale: 1.2, preferredHeight: 2.5 },
 ];
 const FISH_COUNT = fishConfigs.reduce((s, c) => s + c.count, 0);
 
@@ -240,18 +240,25 @@ function updateYear(year: number) {
 }
 
 function syncPopulations(year: number) {
+    // Hide all fish first so species absent this year disappear
+    fishConfigs.forEach(cfg => {
+        const offset = speciesOffset[cfg.id];
+        for (let i = 0; i < cfg.count; i++) {
+            assets.fishData[offset + i].scale = 0;
+        }
+    });
+
     const data = populations.find(p => p.year === year);
     if (!data) return;
 
     Object.keys(data.counts).forEach(speciesId => {
-        const targetCount = data.counts[speciesId];
         const offset = speciesOffset[speciesId];
-        const speciesCapacity = fishConfigs.find(c => c.id === speciesId)?.count || 0;
-        
+        if (offset === undefined) return; // species not in fishConfigs, skip
+        const targetCount = data.counts[speciesId];
+        const speciesCapacity = fishConfigs.find(c => c.id === speciesId)!.count;
+
         for (let i = 0; i < speciesCapacity; i++) {
-            const globalIdx = offset + i;
-            const fish = assets.fishData[globalIdx];
-            fish.scale = i < targetCount ? 1.0 : 0;
+            assets.fishData[offset + i].scale = i < targetCount ? 1.0 : 0;
         }
     });
 }
