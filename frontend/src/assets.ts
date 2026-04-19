@@ -344,7 +344,7 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
 
 export function setupInteractivePreview(
     canvas: HTMLCanvasElement,
-    type: 'fish' | 'coral',
+    type: 'fish' | 'coral' | 'unknown',
     config: { id: string; color: number | string }
 ): () => void {
     const W = canvas.width, H = canvas.height;
@@ -366,13 +366,14 @@ export function setupInteractivePreview(
     const pivot = new THREE.Object3D();
     thumbScene.add(pivot);
 
-    let mesh: THREE.Mesh;
+    let mesh: THREE.Mesh | undefined;
     if (type === 'fish') {
         const geo = new THREE.ConeGeometry(0.15, 0.8, 4);
         geo.rotateX(Math.PI / 2);
         mesh = new THREE.Mesh(geo, mat);
-        pivot.rotation.y = Math.PI / 2; // show cone profile sideways
-    } else {
+        pivot.rotation.y = Math.PI * 0.4; // 3/4 side view
+        pivot.rotation.x = 0.2; // Slight tilt
+    } else if (type === 'coral') {
         const geos: THREE.BufferGeometry[] = [];
         const pieceCount = 15 + Math.floor(Math.random() * 15);
         for (let i = 0; i < pieceCount; i++) {
@@ -384,10 +385,24 @@ export function setupInteractivePreview(
             geos.push(geo);
         }
         mesh = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(geos), mat);
+        pivot.rotation.y = Math.PI * 0.2;
+    } else if (type === 'unknown') {
+        // Create a large '?' using a texture or just a simple geometry for now
+        // For simplicity and to avoid font loading issues, we'll use a stylized "X" or just leave it empty with a placeholder
+        // Actually, we can just use a Sphere with a wireframe or something technical
+        const geo = new THREE.IcosahedronGeometry(1.5, 1);
+        const wireMat = new THREE.MeshBasicMaterial({ color: 0x557788, wireframe: true, transparent: true, opacity: 0.3 });
+        mesh = new THREE.Mesh(geo, wireMat);
+        
+        // Add a smaller solid core
+        const coreGeo = new THREE.IcosahedronGeometry(0.5, 0);
+        const coreMesh = new THREE.Mesh(coreGeo, new THREE.MeshBasicMaterial({ color: 0x557788 }));
+        pivot.add(coreMesh);
     }
-    pivot.add(mesh);
+    
+    if (mesh) pivot.add(mesh);
 
-    const box = new THREE.Box3().setFromObject(mesh);
+    const box = new THREE.Box3().setFromObject(pivot);
     const center = box.getCenter(new THREE.Vector3());
     const boxSize = box.getSize(new THREE.Vector3()).length();
     const thumbCamera = new THREE.PerspectiveCamera(45, W / H, 0.01, 1000);
@@ -474,10 +489,14 @@ export function generateThumbnail(
     const center = box.getCenter(new THREE.Vector3());
     const boxSize = box.getSize(new THREE.Vector3()).length();
     const thumbCamera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
-    thumbCamera.position.copy(center).add(
-        type === 'fish'
-            ? new THREE.Vector3(0, 0, boxSize * 2.5)
-            : new THREE.Vector3(boxSize, boxSize * 0.8, boxSize)
+    
+    // Angle the camera for a 3/4 view
+    const angle = Math.PI * 0.15;
+    const dist = type === 'fish' ? boxSize * 2.5 : boxSize * 1.5;
+    thumbCamera.position.set(
+        center.x + Math.sin(angle) * dist,
+        center.y + (type === 'fish' ? dist * 0.1 : dist * 0.5),
+        center.z + Math.cos(angle) * dist
     );
     thumbCamera.lookAt(center);
 
