@@ -1300,7 +1300,8 @@ window.addEventListener('mousemove', (event) => {
 window.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
     if (bingoBookEl.style.display === 'block') return;
-    if (fishPopup.style.display === 'block') return; // Prevent clicking through popup
+    if (fishPopup.style.display === 'block') return;
+    if (infoPopupEl.style.display === 'block') return;
     if (!controls.isLocked && !isPaused) return; 
 
     raycaster.setFromCamera(mouse, camera);
