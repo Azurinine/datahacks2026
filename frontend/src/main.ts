@@ -34,6 +34,7 @@ scene.fog = new THREE.Fog(waterSurfaceColor, 10, 130);
 
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
 camera.position.set(0, 5, 0);
+camera.rotation.set(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
