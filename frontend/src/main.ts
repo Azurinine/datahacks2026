@@ -273,7 +273,6 @@ function closeInfoPopup() {
     controls.lock();
 }
 
-function showPopup(id: string, title: string, desc: string) {
 function showTutorialStep(index: number) {
     // Clear old highlights
     document.querySelectorAll('.highlight-tutorial').forEach(el => el.classList.remove('highlight-tutorial'));
