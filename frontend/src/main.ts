@@ -571,8 +571,9 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
         chartKeyHandler = null;
     }
 
-    // Clear any leftover alert panel from a previous chart render
+    // Clear any leftover alert panel / hint from a previous chart render
     document.getElementById('chart-alert-panel')?.remove();
+    document.getElementById('chart-arrow-hint')?.remove();
 
     const years = populations.map(p => p.year);
     let data: number[] = [];
@@ -616,23 +617,20 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
             const meta = chart.getDatasetMeta(1);
             if (!meta?.data) return;
             const c = chart.ctx;
-            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 400); // 0..1 at ~2.5Hz
-            const outerBlur = 14 + pulse * 34;  // 14..48
-            const alpha = 0.5 + pulse * 0.5;    // 0.5..1.0
             alertIndices.forEach(dataIdx => {
                 const el = meta.data[dataIdx];
                 if (!el) return;
                 c.save();
                 // Outer soft halo
                 c.shadowColor = '#ff4444';
-                c.shadowBlur = outerBlur;
+                c.shadowBlur = 20;
                 c.beginPath();
                 c.arc(el.x, el.y, 7, 0, Math.PI * 2);
-                c.strokeStyle = `rgba(255, 68, 68, .8)`;
+                c.strokeStyle = 'rgba(255, 68, 68, 0.7)';
                 c.lineWidth = 2;
                 c.stroke();
-                // Second pass for brighter core ring
-                c.shadowBlur = 24 + pulse * 48;
+                // Inner bright ring
+                c.shadowBlur = 10;
                 c.beginPath();
                 c.arc(el.x, el.y, 7, 0, Math.PI * 2);
                 c.strokeStyle = '#ff4444';
@@ -716,6 +714,17 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
     alertPanel.className = 'chart-alert-panel';
     container.appendChild(alertPanel);
 
+    // Top-right hint badge (only shown when alertIndices is non-empty)
+    const arrowHint = document.createElement('div');
+    arrowHint.id = 'chart-arrow-hint';
+    arrowHint.className = 'chart-arrow-hint';
+    arrowHint.innerHTML = `<span class="chart-arrow-hint-key">→</span><span class="chart-arrow-hint-text">PRESS TO VIEW ALERTS</span>`;
+    arrowHint.style.display = alertIndices.length > 0 ? 'flex' : 'none';
+    container.appendChild(arrowHint);
+
+    // Hide hint once user opens an alert
+    const hideHint = () => { arrowHint.style.display = 'none'; };
+
     // Pointer cursor when hovering an alert circle
     canvas.onmousemove = (e: MouseEvent) => {
         const points = missionChart!.getElementsAtEventForMode(e, 'point', { intersect: true }, true);
@@ -730,6 +739,7 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
         const msgs = alertsByYear.get(year)!;
         activeAlertIdx = alertIndices.indexOf(dataIdx);
         const pos = `${activeAlertIdx + 1} / ${alertIndices.length}`;
+        hideHint();
 
         alertPanel.innerHTML = `
             <div class="chart-alert-close">×</div>
@@ -780,8 +790,16 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
 
     // Arrow-key navigation between alert circles (capture phase beats global handler)
     chartKeyHandler = (e: KeyboardEvent) => {
-        if (alertPanel.style.display !== 'block' || activeAlertIdx === null) return;
         if (e.code !== 'ArrowLeft' && e.code !== 'ArrowRight') return;
+        if (alertIndices.length === 0) return;
+        // If panel closed, right arrow opens the first alert
+        if (alertPanel.style.display !== 'block' || activeAlertIdx === null) {
+            if (e.code !== 'ArrowRight') return;
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            showAlertAtDataIndex(alertIndices[0]);
+            return;
+        }
         e.stopImmediatePropagation();
         e.preventDefault();
         const total = alertIndices.length;
@@ -792,13 +810,6 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
     };
     window.addEventListener('keydown', chartKeyHandler, true);
 
-    // Pulse loop — drives continuous glow animation on alert circles
-    const pulse = () => {
-        if (!missionChart) return;
-        missionChart.update('none');
-        chartPulseRaf = requestAnimationFrame(pulse);
-    };
-    chartPulseRaf = requestAnimationFrame(pulse);
 }
 
 function showEndgameStats() {

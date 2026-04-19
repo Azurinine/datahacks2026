@@ -1325,6 +1325,45 @@ input[type=range]::-webkit-slider-thumb:hover {
     text-align: center;
 }
 
+/* Top-right chart hint badge */
+.chart-arrow-hint {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    pointer-events: none;
+    z-index: 10;
+    animation: hintPulse 2s ease-in-out infinite;
+}
+
+.chart-arrow-hint-key {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    color: rgba(255, 170, 170, 0.95);
+    background: none;
+    border: none;
+    border-radius: 3px;
+    padding: 1px 7px;
+}
+
+.chart-arrow-hint-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+@keyframes hintPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
 #endgame-restart {
     background: var(--primary);
     color: #020617;
