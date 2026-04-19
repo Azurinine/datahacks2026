@@ -4,6 +4,7 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { createAssetRegistry, setupInteractivePreview, generateThumbnail, warmThumbnailCache, type AssetRegistry, type CoralConfig } from './assets';
 import * as TWEEN from '@tweenjs/tween.js';
 import Chart from 'chart.js/auto';
@@ -43,6 +44,9 @@ document.body.appendChild(renderer.domElement);
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.12, 0.4, 1.0);
+composer.addPass(bloomPass);
+
 const RadialBlurShader = {
     uniforms: { "tDiffuse": { value: null }, "strength": { value: 0.15 }, "center": { value: new THREE.Vector2(0.5, 0.5) } },
     vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -75,7 +79,7 @@ beamGeometry.translate(0, -30, 0);
 beamGeometry.rotateX(-Math.PI / 2);
 const beamMaterial = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { color: { value: new THREE.Color(0xffffff) }, opacity: { value: 0.3 } },
+    uniforms: { color: { value: new THREE.Color(0xaaaaaa) }, opacity: { value: 0.3 } },
     vertexShader: `varying vec2 vUv; varying float vDepth; void main() { vUv = uv; vec4 mvPosition = modelViewMatrix * vec4(position, 1.0); vDepth = -mvPosition.z; gl_Position = projectionMatrix * mvPosition; }`,
     fragmentShader: `varying vec2 vUv; varying float vDepth; uniform vec3 color; uniform float opacity; void main() { float radial = 1.0 - smoothstep(0.0, 0.5, length(vUv - 0.5)); float distFade = 1.0 - smoothstep(0.0, 50.0, vDepth); gl_FragColor = vec4(color, radial * distFade * opacity); }`
 });
@@ -796,14 +800,36 @@ function updateYear(year: number) {
     });
 
     const greyColor = new THREE.Color(0xcccccc);
+    const initialYearData = populations[0];
+
     if (assets && assets.coralsGroup) {
         assets.coralsGroup.children.forEach(speciesMesh => {
             const data = speciesMesh.userData;
             if (data.type === 'coral') {
                 const isBleached = data.bleach_year !== null && year >= data.bleach_year;
-                const targetColor = isBleached ? greyColor : data.originalColor;
+                
+                const initialPop = initialYearData ? (initialYearData.counts[data.id] || 0) : 1;
+                const currentPopData = populations.find(p => p.year === year);
+                const currentPop = currentPopData ? (currentPopData.counts[data.id] || 0) : 0;
+                const popRatio = currentPop / initialPop;
+
                 const mat = (speciesMesh as THREE.Mesh).material as THREE.MeshStandardMaterial;
-                mat.color.copy(targetColor);
+                
+                if (isBleached) {
+                    mat.color.copy(greyColor);
+                    mat.emissive.setHex(0x000000);
+                    mat.emissiveIntensity = 0;
+                } else if (popRatio > 0.5) {
+                    // Stage 1: Healthy Glow (Above bloom threshold)
+                    mat.color.copy(data.originalColor);
+                    mat.emissive.copy(data.originalColor);
+                    mat.emissiveIntensity = 1.3; 
+                } else {
+                    // Stage 2: Stressed (Below bloom threshold)
+                    mat.color.copy(data.originalColor);
+                    mat.emissive.copy(data.originalColor);
+                    mat.emissiveIntensity = 0.4;
+                }
             }
         });
     }
@@ -1104,6 +1130,9 @@ function animate() {
     assets.sunRayMaterial.opacity = Math.max(0, 0.04 * (1.0 - depthLerp));
     if (assets.seaweedMaterials) {
         assets.seaweedMaterials.forEach(mat => mat.uniforms.time.value = time * 0.001);
+    }
+    if (assets.coralGlobalUniforms) {
+        assets.coralGlobalUniforms.time.value = time * 0.001;
     }
 
     if (!isPaused) {

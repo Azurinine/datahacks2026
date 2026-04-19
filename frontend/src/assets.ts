@@ -14,6 +14,7 @@ export interface AssetRegistry {
     fishMesh: THREE.InstancedMesh;
     fishHitboxMesh: THREE.InstancedMesh; // Added for easier clicking
     coralsGroup: THREE.Group;
+    coralGlobalUniforms: { time: { value: number } };
     geographyGroup: THREE.Group;
     environmentGroup: THREE.Group;
     fishData: { 
@@ -51,7 +52,7 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
     // --- Fish System ---
     const fishGeometry = new THREE.ConeGeometry(0.15, 0.8, 4);
     fishGeometry.rotateX(Math.PI / 2); 
-    const fishMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+    const fishMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.4 });
     const fishMesh = new THREE.InstancedMesh(fishGeometry, fishMaterial, totalFishCount);
     fishMesh.frustumCulled = false;
     
@@ -177,7 +178,44 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
 
     // --- Reef ---
     const coralsGroup = new THREE.Group();
-    const coralMaterial = new THREE.MeshStandardMaterial({ color: 0xff6b81, flatShading: true });
+    const coralGlobalUniforms = { time: { value: 0 } };
+    const coralMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xdddddd, 
+        flatShading: true,
+        roughness: 0.7,
+        metalness: 0.1
+    });
+
+    coralMaterial.onBeforeCompile = (shader) => {
+        shader.uniforms.time = coralGlobalUniforms.time;
+        
+        // Vertex sway
+        shader.vertexShader = `
+            uniform float time;
+            ${shader.vertexShader}
+        `.replace(
+            `#include <begin_vertex>`,
+            `#include <begin_vertex>
+            // Subtle sway based on position and time
+            float sway = sin(time * 1.5 + position.x * 0.8 + position.z * 0.8) * 0.08 * max(0.0, position.y - 1.0);
+            transformed.x += sway;
+            transformed.z += sway * 0.5;
+            `
+        );
+        
+        // Fragment pulse
+        shader.fragmentShader = `
+            uniform float time;
+            ${shader.fragmentShader}
+        `.replace(
+            `#include <emissivemap_fragment>`,
+            `#include <emissivemap_fragment>
+            // Simple pulsing effect applied to emissive radiance
+            float pulse = sin(time * 2.0) * 0.25 + 0.75;
+            totalEmissiveRadiance *= pulse;
+            `
+        );
+    };
     
     // Distribute corals based on configs
     coralConfigs.forEach(cfg => {
@@ -224,8 +262,14 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
 
         if (speciesGeometries.length > 0) {
             const mergedSpeciesGeo = BufferGeometryUtils.mergeGeometries(speciesGeometries);
-            const speciesMesh = new THREE.Mesh(mergedSpeciesGeo, coralMaterial.clone());
-            (speciesMesh.material as THREE.MeshStandardMaterial).color.copy(speciesColor);
+            
+            // Clone the upgraded material and set species-specific colors
+            const mat = coralMaterial.clone();
+            mat.color.copy(speciesColor);
+            mat.emissive.copy(speciesColor);
+            mat.emissiveIntensity = 1.3;
+
+            const speciesMesh = new THREE.Mesh(mergedSpeciesGeo, mat);
             
             speciesMesh.userData = { 
                 type: 'coral', 
@@ -287,7 +331,7 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
                 vUv = uv;
                 vec3 pos = position;
                 // Wiggle: intensity increases with height
-                float wiggle = sin(time * 1.5 + position.y * 0.5) * (heightFromBase * 0.15);
+                float wiggle = sin(time * 1.5 + position.x * 0.5 + position.z * 0.5) * (heightFromBase * 0.15);
                 pos.x += wiggle;
                 pos.z += wiggle * 0.5;
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -335,8 +379,19 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
         sunRaysGroup.add(mesh);
     }
 
+    // --- Ambient Dust ---
+    const dustGeometry = new THREE.BufferGeometry();
+    const dustCount = 4000;
+    const dustPositions = new Float32Array(dustCount * 3);
+    for (let i = 0; i < dustCount * 3; i++) {
+        dustPositions[i] = (Math.random() - 0.5) * 200;
+    }
+    dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+    const dustMaterial = new THREE.PointsMaterial({ color: 0x888888, size: 0.05, transparent: true, opacity: 0.3 });
+    environmentGroup.add(new THREE.Points(dustGeometry, dustMaterial));
+
     return {
-        fishMesh, fishHitboxMesh, coralsGroup, geographyGroup, environmentGroup, fishData, rockSpheres,
+        fishMesh, fishHitboxMesh, coralsGroup, coralGlobalUniforms, geographyGroup, environmentGroup, fishData, rockSpheres,
         fishMaterial, coralMaterial, rockMaterial, seaweedsGroup, seaweedMaterials,
         sunRaysGroup, sunRayMaterial
     };
