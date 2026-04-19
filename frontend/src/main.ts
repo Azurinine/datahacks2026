@@ -85,6 +85,10 @@ let isPaused = false, headlightOn = true, blurEnabled = true;
 const yearSlider = document.getElementById('year-slider') as HTMLInputElement;
 const yearValue = document.getElementById('year-value')!;
 const brightnessSlider = document.getElementById('brightness-slider') as HTMLInputElement;
+const fishPopup = document.getElementById('fish-popup')!;
+const fishNameEl = document.getElementById('fish-name')!;
+const fishDescEl = document.getElementById('fish-desc')!;
+const popupClose = document.getElementById('popup-close')!;
 
 let populations: PopulationYear[] = [];
 
@@ -107,6 +111,7 @@ document.addEventListener('keydown', (event) => {
     if (event.code === 'KeyJ') updateBrightness(Math.max(0, parseFloat(brightnessSlider.value) - 0.1));
     if (event.code === 'KeyL') updateBrightness(Math.min(3, parseFloat(brightnessSlider.value) + 0.1));
 });
+
 document.addEventListener('keyup', (event) => {
     switch (event.code) {
         case 'KeyW': moveState.forward = false; break;
@@ -118,12 +123,56 @@ document.addEventListener('keyup', (event) => {
         case 'ShiftRight': moveState.down = false; break;
     }
 });
+
 function updateBrightness(val: number) {
     brightnessSlider.value = val.toFixed(1);
     headlight.intensity = val * 100; 
     beamMaterial.uniforms.opacity.value = (val / 3) * 0.4;
 }
 brightnessSlider.addEventListener('input', (e) => updateBrightness(parseFloat((e.target as HTMLInputElement).value)));
+
+popupClose.addEventListener('click', () => {
+    fishPopup.style.display = 'none';
+    isPaused = false;
+    document.getElementById('pause-indicator')!.style.display = 'none';
+    controls.lock();
+});
+
+// Interaction
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+window.addEventListener('click', () => {
+    if (!controls.isLocked || isPaused) return;
+
+    // Center of screen
+    mouse.x = 0;
+    mouse.y = 0;
+    raycaster.setFromCamera(mouse, camera);
+
+    const intersects = raycaster.intersectObject(assets.fishMesh);
+
+    if (intersects.length > 0) {
+        const instanceId = intersects[0].instanceId;
+        if (instanceId !== undefined) {
+            const data = assets.fishData[instanceId];
+            const speciesId = fishConfigs[data.schoolId].id;
+            
+            // Find species config
+            const config = fishConfigs.find(c => c.id === speciesId);
+            if (config) {
+                fishNameEl.innerText = speciesId.toUpperCase();
+                fishDescEl.innerText = `Detailed scan for ${speciesId} sequence complete. Species is exhibiting normal migration patterns for the current simulated year.`;
+                fishPopup.style.display = 'block';
+                
+                // Freeze time
+                isPaused = true;
+                document.getElementById('pause-indicator')!.style.display = 'flex';
+                controls.unlock();
+            }
+        }
+    }
+});
 
 // Floor
 const floorGeometry = new THREE.PlaneGeometry(120, 160, 64, 80);
