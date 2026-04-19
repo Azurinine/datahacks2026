@@ -5,20 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Channel Islands Explorer</title>
-    <!-- Tech Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-Dq0EanfW.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-C294CpXX.css">
+    <script type="module" crossorigin src="/assets/index-DeffSUJG.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DDlMcEYd.css">
   </head>
   <body>
-    <div id="app"></div>
-    
+    <div id="temp-tint" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(244, 63, 94, 0.2) 0%, rgba(244, 63, 94, 0.4) 100%); pointer-events: none; z-index: 50; opacity: 0; transition: opacity 1.5s ease-in-out;"></div>
+
     <div id="instructions">
-      <h1>CHANNEL ISLANDS EXPLORER</h1>
+      <h1>CHANNEL ISLANDS</h1>
+      <div class="subtitle">DEEP SEA OPERATIONAL INTERFACE</div>
       <div class="divider"></div>
-      <p class="subtitle">INITIATE DIVE SEQUENCE</p>
       <div class="controls-grid">
         <div class="control-key"><kbd>W A S D</kbd>MOVE</div>
         <div class="control-key"><kbd>SPACE</kbd>ASCEND</div>
@@ -51,7 +50,7 @@
 
     <!-- Redesigned HUD -->
     <div id="hud-container">
-      
+
       <!-- Top Left: Sensor Readings -->
       <div id="panel-stats" class="hud-panel">
         <div class="panel-header">ENVIRONMENT SENSORS</div>
@@ -67,7 +66,7 @@
           <div id="notif-warning" class="bingo-badge warning" style="display: none;">0</div>
           <div id="notif-critical" class="bingo-badge critical" style="display: none;">0</div>
         </div>
-        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
         </svg>
@@ -80,7 +79,7 @@
       <!-- Top Right: Mission Controls -->
       <div id="panel-controls" class="hud-panel">
         <div class="panel-header">MISSION CONTROLS</div>
-        
+
         <div id="year-display">YEAR // <span id="year-value" class="highlight">2014</span></div>
         <div id="slider-wrapper">
           <input type="range" id="year-slider" min="2014" max="2026" value="2014" step="1">

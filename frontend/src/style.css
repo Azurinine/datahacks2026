@@ -278,6 +278,11 @@ body {
     color: var(--text-main); 
 }
 
+.stat-value.warning {
+    color: var(--danger);
+    text-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
+}
+
 .highlight { 
     color: var(--secondary); 
     text-shadow: 0 0 10px rgba(52, 211, 153, 0.3);

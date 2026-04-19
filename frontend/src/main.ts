@@ -28,9 +28,9 @@ interface Discovery {
 // 1. GLOBAL STATE & ENGINE SETUP
 // ==========================================
 const scene = new THREE.Scene();
-const waterSurfaceColor = new THREE.Color(0x0088dd);
-const waterDeepColor = new THREE.Color(0x00aaaa);
-scene.background = new THREE.Color(0x000000); 
+const waterSurfaceColor = new THREE.Color(0x0055aa); // Rich Royal Blue
+const waterDeepColor = new THREE.Color(0x001133);    // Deep Ultramarine Navy
+scene.background = new THREE.Color(0x001133); 
 scene.fog = new THREE.FogExp2(waterSurfaceColor, 0.012);
 
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
@@ -65,7 +65,7 @@ const blurPass = new ShaderPass(RadialBlurShader);
 composer.addPass(blurPass);
 
 // Lighting
-const ambientLight = new THREE.AmbientLight(0x1a3a5e, 0.15); 
+const ambientLight = new THREE.AmbientLight(0x1a3a5e, 0.2); 
 scene.add(ambientLight);
 const headlight = new THREE.SpotLight(0xffffff, 50, 80, Math.PI / 6, 0.1, 2);
 headlight.position.set(0, 0, 0);
@@ -166,6 +166,7 @@ const direction = new THREE.Vector3();
 let populations: PopulationYear[] = [];
 let envByYear: { [year: number]: { avg_ph: number; avg_temp: number; vitality: number } } = {};
 let coralMetadata: any[] = [];
+let currentGlobalPH = 8.1;
 
 // Reset on reload
 localStorage.removeItem('discoveryLog');
@@ -178,6 +179,8 @@ let needsBingoRender = true;
 let fishConfigs: any[] = [];
 let FISH_COUNT = 0;
 const speciesOffset: { [id: string]: number } = {};
+
+const tempTint = document.getElementById('temp-tint')!;
 let assets: AssetRegistry;
 const TOTAL_CORAL_CAP = 1200;
 
@@ -717,11 +720,18 @@ function syncPopulations(year: number) {
     });
 }
 
+let lastWarningYear = -1;
 function applyDataToWorld(pH: number, temp: number) {
+    currentGlobalPH = pH;
     let vitality = Math.max(0, Math.min(1, (pH - 7.6) / 0.5)); 
-    document.getElementById('stat-ph')!.innerText = pH.toFixed(2);
-    document.getElementById('stat-temp')!.innerText = temp.toFixed(1) + " °C";
-    document.getElementById('stat-vit')!.innerText = (vitality*100).toFixed(0) + "%";
+    
+    const phEl = document.getElementById('stat-ph')!;
+    const tempEl = document.getElementById('stat-temp')!;
+    const vitEl = document.getElementById('stat-vit')!;
+
+    phEl.innerText = pH.toFixed(2);
+    tempEl.innerText = temp.toFixed(1) + " °C";
+    vitEl.innerText = (vitality*100).toFixed(0) + "%";
     updateFish(vitality);
     
     // Intense visual effects as vitality drops
@@ -729,6 +739,29 @@ function applyDataToWorld(pH: number, temp: number) {
         blurPass.uniforms.strength.value = 0.15 + (0.3 - vitality) * 2;
     } else {
         blurPass.uniforms.strength.value = 0.15;
+    }
+
+    // Thresholds adjusted for ~1/3 occurrences
+    const isTempCritical = temp > 11.58; // Hits 2014, 2015, 2016
+    const isPHCritical = pH < 7.946;    // Hits 2024, 2025, 2026
+
+    // Highlight numbers in red
+    phEl.classList.toggle('warning', isPHCritical);
+    tempEl.classList.toggle('warning', isTempCritical);
+
+    // Temperature Red Tint
+    if (isTempCritical) {
+        const intensity = Math.min(1, (temp - 11.58) * 5);
+        tempTint.style.opacity = (intensity * 0.4).toString();
+    } else {
+        tempTint.style.opacity = '0';
+    }
+
+    // Warning Controller
+    if (currentYear !== lastWarningYear && (isTempCritical || isPHCritical)) {
+        if (isTempCritical) addChatMessage("SYSTEM ALERT: THERMAL STRESS DETECTED", "critical");
+        if (isPHCritical) addChatMessage("SYSTEM ALERT: pH CRITICAL - VISIBILITY LOWERING", "critical");
+        lastWarningYear = currentYear;
     }
 }
 
@@ -1096,11 +1129,15 @@ function animate() {
 
     const currentY = camera.position.y, depthLerp = Math.max(0, Math.min(1, (35 - currentY) / 40));
     const currentWaterColor = waterSurfaceColor.clone().lerp(waterDeepColor, depthLerp);
+    scene.background = currentWaterColor;
+    
+    // Visibility based on depth and pH acidification
+    const phMurkiness = Math.max(0, (7.95 - currentGlobalPH) * 1.5);
     if (scene.fog instanceof THREE.FogExp2) {
         scene.fog.color.copy(currentWaterColor);
-        scene.fog.density = 0.05 - (1.0 - depthLerp) * 0.04;
+        scene.fog.density = (0.05 - (1.0 - depthLerp) * 0.04) + phMurkiness;
     }
-    ambientLight.intensity = 0.1 + depthLerp * 0.2; 
+    ambientLight.intensity = 0.2 + depthLerp * 0.15; 
 
     if (controls.isLocked === true) {
         const oldPos = camera.position.clone();
