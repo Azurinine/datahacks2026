@@ -1,0 +1,11 @@
+[
+  { "id": "chromis", "color": "#55aaff", "count": 300, "speedMultiplier": 1.0, "scale": 1.0, "preferredHeight": 3.0, "desc": "Small, schooling damselfish often found hovering above coral heads." },
+  { "id": "clownfish", "color": "#ffaa55", "count": 300, "speedMultiplier": 1.2, "scale": 0.8, "preferredHeight": 2.0, "desc": "Famous for their symbiotic relationship with sea anemones." },
+  { "id": "tang", "color": "#55ffaa", "count": 300, "speedMultiplier": 0.8, "scale": 1.2, "preferredHeight": 4.0, "desc": "Known for their vibrant colors and sharp spines near the tail." },
+  { "id": "anthias", "color": "#ff55aa", "count": 300, "speedMultiplier": 1.5, "scale": 0.9, "preferredHeight": 2.5, "desc": "Brightly colored reef fish that form large, beautiful schools." },
+  { "id": "garibaldi", "color": "#ffa500", "count": 300, "speedMultiplier": 1.1, "scale": 1.3, "preferredHeight": 3.5, "desc": "California state marine fish, highly territorial and bright orange." },
+  { "id": "rockfish", "color": "#ff4500", "count": 300, "speedMultiplier": 0.7, "scale": 1.1, "preferredHeight": 1.5, "desc": "Long-lived fish that blend into the rocky crevices of the reef." },
+  { "id": "sheephead", "color": "#8b0000", "count": 300, "speedMultiplier": 0.9, "scale": 1.5, "preferredHeight": 2.0, "desc": "Changes sex from female to male during its lifecycle. Important for urchin control." },
+  { "id": "senorita", "color": "#ffff00", "count": 300, "speedMultiplier": 1.3, "scale": 0.7, "preferredHeight": 4.5, "desc": "Slender wrasse that acts as a cleaner fish for larger species." },
+  { "id": "kelpbass", "color": "#556b2f", "count": 300, "speedMultiplier": 1.0, "scale": 1.2, "preferredHeight": 2.5, "desc": "A popular game fish found primarily in kelp forests." }
+]
