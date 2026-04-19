@@ -341,3 +341,147 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
         sunRaysGroup, sunRayMaterial
     };
 }
+
+export function setupInteractivePreview(
+    canvas: HTMLCanvasElement,
+    type: 'fish' | 'coral',
+    config: { id: string; color: number | string }
+): () => void {
+    const W = canvas.width, H = canvas.height;
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(W, H, false);
+    renderer.setClearColor(0x000000, 0);
+
+    const thumbScene = new THREE.Scene();
+    thumbScene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dir = new THREE.DirectionalLight(0xffffff, 1.4);
+    dir.position.set(3, 5, 4);
+    thumbScene.add(dir);
+
+    const colorHex = typeof config.color === 'string'
+        ? parseInt(config.color.replace('#', ''), 16)
+        : config.color;
+    const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.4 });
+
+    const pivot = new THREE.Object3D();
+    thumbScene.add(pivot);
+
+    let mesh: THREE.Mesh;
+    if (type === 'fish') {
+        const geo = new THREE.ConeGeometry(0.15, 0.8, 4);
+        geo.rotateX(Math.PI / 2);
+        mesh = new THREE.Mesh(geo, mat);
+        pivot.rotation.y = Math.PI / 2; // show cone profile sideways
+    } else {
+        const geos: THREE.BufferGeometry[] = [];
+        const pieceCount = 15 + Math.floor(Math.random() * 15);
+        for (let i = 0; i < pieceCount; i++) {
+            const isSphere = Math.random() < 0.3;
+            const geo = isSphere
+                ? new THREE.SphereGeometry(0.8, 8, 8)
+                : new THREE.CylinderGeometry(0.1, 0.7, Math.random() * 5.0 + 1.5, 8);
+            geo.translate((Math.random() - 0.5) * 3.5, Math.random() * 1.5, (Math.random() - 0.5) * 3.5);
+            geos.push(geo);
+        }
+        mesh = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(geos), mat);
+    }
+    pivot.add(mesh);
+
+    const box = new THREE.Box3().setFromObject(mesh);
+    const center = box.getCenter(new THREE.Vector3());
+    const boxSize = box.getSize(new THREE.Vector3()).length();
+    const thumbCamera = new THREE.PerspectiveCamera(45, W / H, 0.01, 1000);
+    const dist = type === 'fish' ? boxSize * 2.2 : boxSize * 1.1;
+    thumbCamera.position.set(center.x, center.y, center.z + dist);
+    thumbCamera.lookAt(center);
+
+    // Drag-to-rotate
+    let isDragging = false, prevX = 0, prevY = 0;
+    const onDown = (e: PointerEvent) => { isDragging = true; prevX = e.clientX; prevY = e.clientY; canvas.setPointerCapture(e.pointerId); };
+    const onMove = (e: PointerEvent) => {
+        if (!isDragging) return;
+        pivot.rotation.y += (e.clientX - prevX) * 0.012;
+        pivot.rotation.x += (e.clientY - prevY) * 0.012;
+        prevX = e.clientX; prevY = e.clientY;
+    };
+    const onUp = () => { isDragging = false; };
+    canvas.addEventListener('pointerdown', onDown);
+    canvas.addEventListener('pointermove', onMove);
+    canvas.addEventListener('pointerup', onUp);
+
+    let animId: number;
+    const loop = () => { animId = requestAnimationFrame(loop); renderer.render(thumbScene, thumbCamera); };
+    loop();
+
+    return () => {
+        cancelAnimationFrame(animId);
+        canvas.removeEventListener('pointerdown', onDown);
+        canvas.removeEventListener('pointermove', onMove);
+        canvas.removeEventListener('pointerup', onUp);
+        renderer.dispose();
+    };
+}
+
+const _thumbnailCache = new Map<string, string>();
+
+export function generateThumbnail(
+    type: 'fish' | 'coral',
+    config: { id: string; color: number | string },
+    size = 200
+): string {
+    if (_thumbnailCache.has(config.id)) return _thumbnailCache.get(config.id)!;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const offscreenRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    offscreenRenderer.setSize(size, size);
+    offscreenRenderer.setClearColor(0x000000, 0);
+
+    const thumbScene = new THREE.Scene();
+    thumbScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(2, 4, 3);
+    thumbScene.add(dirLight);
+
+    const colorHex = typeof config.color === 'string'
+        ? parseInt(config.color.replace('#', ''), 16)
+        : config.color;
+    const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.4 });
+
+    let mesh: THREE.Mesh;
+    if (type === 'fish') {
+        const geo = new THREE.ConeGeometry(0.15, 0.8, 4);
+        geo.rotateX(Math.PI / 2);
+        mesh = new THREE.Mesh(geo, mat);
+    } else {
+        const geos: THREE.BufferGeometry[] = [];
+        const pieceCount = 15 + Math.floor(Math.random() * 15);
+        for (let i = 0; i < pieceCount; i++) {
+            const isSphere = Math.random() < 0.3;
+            const geo = isSphere
+                ? new THREE.SphereGeometry(0.8, 8, 8)
+                : new THREE.CylinderGeometry(0.1, 0.7, Math.random() * 5.0 + 1.5, 8);
+            geo.translate((Math.random() - 0.5) * 3.5, Math.random() * 1.5, (Math.random() - 0.5) * 3.5);
+            geos.push(geo);
+        }
+        mesh = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(geos), mat);
+    }
+    thumbScene.add(mesh);
+
+    const box = new THREE.Box3().setFromObject(mesh);
+    const center = box.getCenter(new THREE.Vector3());
+    const boxSize = box.getSize(new THREE.Vector3()).length();
+    const thumbCamera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
+    thumbCamera.position.copy(center).add(
+        type === 'fish'
+            ? new THREE.Vector3(0, 0, boxSize * 2.5)
+            : new THREE.Vector3(boxSize, boxSize * 0.8, boxSize)
+    );
+    thumbCamera.lookAt(center);
+
+    offscreenRenderer.render(thumbScene, thumbCamera);
+    const dataUrl = canvas.toDataURL('image/png');
+    offscreenRenderer.dispose();
+    _thumbnailCache.set(config.id, dataUrl);
+    return dataUrl;
+}
