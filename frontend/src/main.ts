@@ -44,7 +44,7 @@ document.body.appendChild(renderer.domElement);
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.12, 0.4, 1.0);
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.08, 0.4, 1.0);
 composer.addPass(bloomPass);
 
 const RadialBlurShader = {
@@ -65,7 +65,7 @@ const blurPass = new ShaderPass(RadialBlurShader);
 composer.addPass(blurPass);
 
 // Lighting
-const ambientLight = new THREE.AmbientLight(0x1a3a5e, 0.1); 
+const ambientLight = new THREE.AmbientLight(0x1a3a5e, 0.15); 
 scene.add(ambientLight);
 const headlight = new THREE.SpotLight(0xffffff, 50, 80, Math.PI / 6, 0.1, 2);
 headlight.position.set(0, 0, 0);
@@ -79,7 +79,7 @@ beamGeometry.translate(0, -30, 0);
 beamGeometry.rotateX(-Math.PI / 2);
 const beamMaterial = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { color: { value: new THREE.Color(0xaaaaaa) }, opacity: { value: 0.3 } },
+    uniforms: { color: { value: new THREE.Color(0xcccccc) }, opacity: { value: 0.3 } },
     vertexShader: `varying vec2 vUv; varying float vDepth; void main() { vUv = uv; vec4 mvPosition = modelViewMatrix * vec4(position, 1.0); vDepth = -mvPosition.z; gl_Position = projectionMatrix * mvPosition; }`,
     fragmentShader: `varying vec2 vUv; varying float vDepth; uniform vec3 color; uniform float opacity; void main() { float radial = 1.0 - smoothstep(0.0, 0.5, length(vUv - 0.5)); float distFade = 1.0 - smoothstep(0.0, 50.0, vDepth); gl_FragColor = vec4(color, radial * distFade * opacity); }`
 });
@@ -819,13 +819,14 @@ function updateYear(year: number) {
                     mat.color.copy(greyColor);
                     mat.emissive.setHex(0x000000);
                     mat.emissiveIntensity = 0;
-                } else if (popRatio > 0.5) {
+                } else if (popRatio > 0.5 && !data.hasBeenStressed) {
                     // Stage 1: Healthy Glow (Above bloom threshold)
                     mat.color.copy(data.originalColor);
                     mat.emissive.copy(data.originalColor);
-                    mat.emissiveIntensity = 1.3; 
+                    mat.emissiveIntensity = 1.15; 
                 } else {
-                    // Stage 2: Stressed (Below bloom threshold)
+                    // Stage 2: Stressed (Below bloom threshold) - Permanent once reached
+                    data.hasBeenStressed = true;
                     mat.color.copy(data.originalColor);
                     mat.emissive.copy(data.originalColor);
                     mat.emissiveIntensity = 0.4;

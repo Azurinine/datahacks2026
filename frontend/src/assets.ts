@@ -52,7 +52,7 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
     // --- Fish System ---
     const fishGeometry = new THREE.ConeGeometry(0.15, 0.8, 4);
     fishGeometry.rotateX(Math.PI / 2); 
-    const fishMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.4 });
+    const fishMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
     const fishMesh = new THREE.InstancedMesh(fishGeometry, fishMaterial, totalFishCount);
     fishMesh.frustumCulled = false;
     
@@ -267,7 +267,7 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
             const mat = coralMaterial.clone();
             mat.color.copy(speciesColor);
             mat.emissive.copy(speciesColor);
-            mat.emissiveIntensity = 1.3;
+            mat.emissiveIntensity = 1.15;
 
             const speciesMesh = new THREE.Mesh(mergedSpeciesGeo, mat);
             
@@ -277,7 +277,8 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
                 name: cfg.name, 
                 desc: cfg.desc, 
                 bleach_year: cfg.bleach_year,
-                originalColor: speciesColor.clone()
+                originalColor: speciesColor.clone(),
+                hasBeenStressed: false
             };
             coralsGroup.add(speciesMesh);
         }
