@@ -13,5 +13,8 @@
     "three": "^0.184.0",
     "typescript": "~6.0.2",
     "vite": "^8.0.4"
+  },
+  "dependencies": {
+    "@tweenjs/tween.js": "^25.0.0"
   }
 }

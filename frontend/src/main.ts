@@ -6,6 +6,11 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { createAssetRegistry, type AssetRegistry } from './assets';
 
+interface PopulationYear {
+    year: number;
+    counts: { [species: string]: number };
+}
+
 // ==========================================
 // 1. ENGINE SETUP (Scene, Camera, Renderer)
 // ==========================================
@@ -81,6 +86,9 @@ const yearSlider = document.getElementById('year-slider') as HTMLInputElement;
 const yearValue = document.getElementById('year-value')!;
 const brightnessSlider = document.getElementById('brightness-slider') as HTMLInputElement;
 
+let populations: PopulationYear[] = [];
+const speciesOffset: { [id: string]: number } = { 'chromis': 0, 'clownfish': 200, 'tang': 400, 'anthias': 600 };
+
 document.addEventListener('keydown', (event) => {
     switch (event.code) {
         case 'KeyW': moveState.forward = true; break;
@@ -144,6 +152,14 @@ const fishConfigs = [
 const FISH_COUNT = fishConfigs.reduce((s, c) => s + c.count, 0);
 const assets: AssetRegistry = createAssetRegistry(fishConfigs);
 scene.add(assets.fishMesh); scene.add(assets.coralsGroup); scene.add(assets.sunRaysGroup); scene.add(assets.geographyGroup); scene.add(assets.environmentGroup); scene.add(assets.seaweedsGroup);
+
+fetch('/data/populations.json')
+    .then(res => res.json())
+    .then(data => {
+        populations = data;
+        syncPopulations(2014); // Initial sync
+    });
+
 const dyingColor = new THREE.Color(0x445566), tempColor = new THREE.Color();
 function updateFish(vitality: number) {
     if (assets.fishMesh.instanceColor) {
@@ -159,7 +175,25 @@ function updateYear(year: number) {
     const yearsPassed = year - 2014;
     const simulatedPH = 8.1 - (yearsPassed * 0.04), simulatedTemp = 10.0 + (yearsPassed * 0.15);
     applyDataToWorld(simulatedPH, simulatedTemp, 33.5);
+    syncPopulations(year);
 }
+
+function syncPopulations(year: number) {
+    const data = populations.find(p => p.year === year);
+    if (!data) return;
+
+    Object.keys(data.counts).forEach(speciesId => {
+        const targetCount = data.counts[speciesId];
+        const offset = speciesOffset[speciesId];
+        
+        for (let i = 0; i < 200; i++) {
+            const globalIdx = offset + i;
+            const fish = assets.fishData[globalIdx];
+            fish.scale = i < targetCount ? 1.0 : 0;
+        }
+    });
+}
+
 function applyDataToWorld(pH: number, temp: number, _salinity: number) {
     let vitality = Math.max(0, Math.min(1, (pH - 7.6) / 0.5)); 
     document.getElementById('stat-ph')!.innerText = pH.toFixed(2);
@@ -218,22 +252,20 @@ function animate() {
         if (Math.abs(playerPos.z) > 70) { playerPos.z = Math.sign(playerPos.z) * 70; }
     }
 
-    // Sun rays get darker as they go down (depthLerp=1 at bottom)
     assets.sunRayMaterial.opacity = Math.max(0, 0.04 * (1.0 - depthLerp));
 
     if (!isPaused) {
         const schoolPositions = [
-            new THREE.Vector3(Math.sin(time*0.0005)*15, 2.5, Math.cos(time*0.0003)*80),
-            new THREE.Vector3(Math.cos(time*0.0004)*10, 4.0, Math.sin(time*0.0002)*70),
-            new THREE.Vector3(Math.sin(time*0.0006)*20, 3.5, Math.cos(time*0.0004)*90),
-            new THREE.Vector3(Math.cos(time*0.00055)*12, 1.5, Math.sin(time*0.00035)*85)
+            new THREE.Vector3(Math.sin(time*0.0002)*15, 2.5, Math.cos(time*0.0001)*80),
+            new THREE.Vector3(Math.cos(time*0.00015)*10, 4.0, Math.sin(time*0.00008)*70),
+            new THREE.Vector3(Math.sin(time*0.00025)*20, 3.5, Math.cos(time*0.00015)*90),
+            new THREE.Vector3(Math.cos(time*0.00022)*12, 1.5, Math.sin(time*0.00012)*85)
         ];
         const playerPos = camera.position;
         for (let i = 0; i < FISH_COUNT; i++) {
             assets.fishMesh.getMatrixAt(i, _matrix); _matrix.decompose(_position, _quaternion, _scale);
             const data = assets.fishData[i], schoolCenter = schoolPositions[data.schoolId], targetPos = schoolCenter.clone().add(data.schoolOffset);
             
-            // 1. Despawn/Respawn: If too far from player, snap to new location near the player
             if (_position.distanceTo(playerPos) > 70) {
                 const angle = Math.random() * Math.PI * 2;
                 const dist = 30 + Math.random() * 20;
@@ -242,17 +274,16 @@ function animate() {
                 assets.fishMesh.setMatrixAt(i, _matrix);
             }
 
-            // 2. Varied Directions: Smoothly lerp position and orient based on movement direction
             const prevPos = _position.clone();
-            _position.lerp(targetPos, 0.02 * (Math.max(0.1, (parseInt(yearSlider.value)-2014)/12*1.5)));
+            _position.lerp(targetPos, 0.005); // Much slower lerp
             
-            // Only update rotation if fish actually moved significantly
-            if (_position.distanceTo(prevPos) > 0.001) {
+            if (_position.distanceTo(prevPos) > 0.0001) {
                 dummy.position.copy(_position);
-                // Look toward movement direction (targetPos), but add variation per fish
                 dummy.lookAt(targetPos);
-                // Randomize local yaw/pitch slightly so they don't look like robots
-                dummy.rotateY(Math.sin(time * 0.002 + i) * 0.2); 
+                dummy.rotateY(Math.sin(time * 0.001 + i) * 0.2); // Slower variation
+                // Instant scale apply
+                const finalScale = data.baseScale * data.scale; 
+                dummy.scale.set(finalScale, finalScale, finalScale);
                 dummy.updateMatrix(); 
                 assets.fishMesh.setMatrixAt(i, dummy.matrix);
             }
