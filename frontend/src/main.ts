@@ -105,6 +105,7 @@ const direction = new THREE.Vector3();
 
 // Data State
 let populations: PopulationYear[] = [];
+let envByYear: { [year: number]: { avg_ph: number; avg_temp: number; vitality: number } } = {};
 let coralMetadata: any[] = [];
 let discoveredSpecies = new Set<string>(JSON.parse(localStorage.getItem('discoveredSpecies') || '[]'));
 let fishConfigs: any[] = [];
@@ -260,21 +261,21 @@ function syncPopulations(year: number) {
     });
 }
 
-function applyDataToWorld(pH: number, temp: number) {
-    let vitality = Math.max(0, Math.min(1, (pH - 7.6) / 0.5)); 
+function applyDataToWorld(pH: number, temp: number, vitality: number) {
     document.getElementById('stat-ph')!.innerText = pH.toFixed(2);
     document.getElementById('stat-temp')!.innerText = temp.toFixed(1) + " °C";
-    document.getElementById('stat-vit')!.innerText = (vitality*100).toFixed(0) + "%";
+    document.getElementById('stat-vit')!.innerText = (vitality * 100).toFixed(0) + "%";
     updateFish(vitality);
 }
 
 function updateYear(year: number) {
-    yearSlider.value = year.toString(); 
+    yearSlider.value = year.toString();
     yearValue.innerText = year.toString();
-    const yearsPassed = year - 2014;
-    const simulatedPH = 8.1 - (yearsPassed * 0.04);
-    const simulatedTemp = 10.0 + (yearsPassed * 0.15);
-    applyDataToWorld(simulatedPH, simulatedTemp);
+    const env = envByYear[year];
+    const pH = env ? env.avg_ph : 8.1 - (year - 2014) * 0.04;
+    const temp = env ? env.avg_temp : 10.0 + (year - 2014) * 0.15;
+    const vitality = env ? env.vitality : 1.0;
+    applyDataToWorld(pH, temp, vitality);
     syncPopulations(year);
 
     const greyColor = new THREE.Color(0xcccccc);
@@ -395,13 +396,8 @@ window.addEventListener('mousemove', (event) => {
 window.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
     if (bingoBookEl.style.display === 'block') return;
-<<<<<<< Updated upstream
     if (fishPopup.style.display === 'block') return; // Prevent clicking through popup
     if (!controls.isLocked && !isPaused) return; 
-=======
-    if (fishPopup.style.display === 'block') return;
-    if (!controls.isLocked) return; 
->>>>>>> Stashed changes
 
     raycaster.setFromCamera(mouse, camera);
     const fishIntersects = raycaster.intersectObject(assets.fishHitboxMesh);
@@ -539,13 +535,15 @@ function animate() {
 }
 
 async function init() {
-    const [popData, coralReg, fishMeta] = await Promise.all([
+    const [popData, coralReg, fishMeta, envData] = await Promise.all([
         fetch('/data/populations.json').then(res => res.json()),
         fetch('/data/coral_registry.json').then(res => res.json()),
-        fetch('/data/fish_metadata.json').then(res => res.json())
+        fetch('/data/fish_metadata.json').then(res => res.json()),
+        fetch('/data/env_by_year.json').then(res => res.json())
     ]);
 
     populations = popData;
+    envByYear = Object.fromEntries(envData.map((e: any) => [e.year, { avg_ph: e.avg_ph, avg_temp: e.avg_temp, vitality: e.vitality }]));
     coralMetadata = coralReg;
     fishConfigs = fishMeta.map((f: any) => ({
         ...f,

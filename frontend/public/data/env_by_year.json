@@ -1,0 +1,93 @@
+[
+  {
+    "year": 2014,
+    "avg_temp": 11.6601,
+    "avg_ph": 7.9727,
+    "vitality": 1.0,
+    "ph_source": "measured"
+  },
+  {
+    "year": 2015,
+    "avg_temp": 11.7783,
+    "avg_ph": 7.9613,
+    "vitality": 0.9529,
+    "ph_source": "measured"
+  },
+  {
+    "year": 2016,
+    "avg_temp": 11.5909,
+    "avg_ph": 7.9538,
+    "vitality": 0.9057,
+    "ph_source": "extrapolated"
+  },
+  {
+    "year": 2017,
+    "avg_temp": 11.3487,
+    "avg_ph": 7.9526,
+    "vitality": 0.8586,
+    "ph_source": "extrapolated"
+  },
+  {
+    "year": 2018,
+    "avg_temp": 11.2873,
+    "avg_ph": 7.9514,
+    "vitality": 0.8115,
+    "ph_source": "extrapolated"
+  },
+  {
+    "year": 2019,
+    "avg_temp": 11.5629,
+    "avg_ph": 7.9502,
+    "vitality": 0.7644,
+    "ph_source": "extrapolated"
+  },
+  {
+    "year": 2020,
+    "avg_temp": 11.5064,
+    "avg_ph": 7.9491,
+    "vitality": 0.7172,
+    "ph_source": "extrapolated"
+  },
+  {
+    "year": 2021,
+    "avg_temp": 10.7803,
+    "avg_ph": 7.9479,
+    "vitality": 0.6701,
+    "ph_source": "extrapolated"
+  },
+  {
+    "year": 2022,
+    "avg_temp": 11.3582,
+    "avg_ph": 7.9467,
+    "vitality": 0.623,
+    "ph_source": "extrapolated"
+  },
+  {
+    "year": 2023,
+    "avg_temp": 11.368,
+    "avg_ph": 7.9455,
+    "vitality": 0.5758,
+    "ph_source": "extrapolated"
+  },
+  {
+    "year": 2024,
+    "avg_temp": 11.3778,
+    "avg_ph": 7.9443,
+    "vitality": 0.5287,
+    "ph_source": "extrapolated"
+  },
+  {
+    "year": 2025,
+    "avg_temp": 11.3876,
+    "avg_ph": 7.9432,
+    "vitality": 0.4816,
+    "ph_source": "extrapolated"
+  },
+  {
+    "year": 2026,
+    "avg_temp": 11.3973,
+    "avg_ph": 7.942,
+    "vitality": 0.4344,
+    "ph_source": "extrapolated"
+  }
+]
