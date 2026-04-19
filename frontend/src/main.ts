@@ -127,11 +127,8 @@ const mouse = new THREE.Vector2();
 // 2. HELPER FUNCTIONS
 // ==========================================
 
-function updateBrightness(val: number) {
-    brightnessSlider.value = val.toFixed(1);
-    headlight.intensity = val * 100; 
-    beamMaterial.uniforms.opacity.value = (val / 3) * 0.4;
-}
+headlight.intensity = 100;
+beamMaterial.uniforms.opacity.value = 0.4;
 
 function closeFishPopup() {
     if (previewDispose) { previewDispose(); previewDispose = null; }
@@ -261,10 +258,11 @@ function syncPopulations(year: number) {
     });
 }
 
-function applyDataToWorld(pH: number, temp: number, vitality: number) {
+function applyDataToWorld(pH: number, temp: number) {
+    let vitality = Math.max(0, Math.min(1, (pH - 7.6) / 0.5)); 
     document.getElementById('stat-ph')!.innerText = pH.toFixed(2);
     document.getElementById('stat-temp')!.innerText = temp.toFixed(1) + " °C";
-    document.getElementById('stat-vit')!.innerText = (vitality * 100).toFixed(0) + "%";
+    document.getElementById('stat-vit')!.innerText = (vitality*100).toFixed(0) + "%";
     updateFish(vitality);
 }
 

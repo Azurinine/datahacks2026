@@ -1,0 +1,57 @@
+[
+  {
+    "year": 2018,
+    "counts": {
+      "nezumia": 8,
+      "sebastolobus": 160,
+      "microstomus": 49,
+      "cataetyx": 2,
+      "icelinus": 18,
+      "eptatretus": 15,
+      "sebastes": 764,
+      "anoplopoma": 1,
+      "bathyagonus": 1,
+      "scyliorhinidae": 7,
+      "nettastomatidae": 5,
+      "merluccius": 19,
+      "glyptocephalus": 2,
+      "zaniolepis": 212,
+      "argentina": 3,
+      "ophidiidae": 127,
+      "pleuronectiformes": 169,
+      "porichthys": 32,
+      "parophrys": 4,
+      "zalembius": 20,
+      "hydrolagus": 3,
+      "citharichthys": 44,
+      "xeneretmus": 6,
+      "pleuronichthys": 4,
+      "enophrys": 2,
+      "lycodes": 1,
+      "caliraja": 1
+    }
+  },
+  {
+    "year": 2019,
+    "counts": {
+      "sebastolobus": 569,
+      "lycenchelys": 25,
+      "myctophidae": 8,
+      "macrouridae": 12,
+      "microstomus": 239,
+      "eptatretus": 112,
+      "cataetyx": 17,
+      "sebastes": 150,
+      "lycodes": 116,
+      "merluccius": 10,
+      "nezumia": 2,
+      "glyptocephalus": 40,
+      "icelinus": 4,
+      "scyliorhinidae": 1,
+      "zaniolepis": 5,
+      "caliraja": 1,
+      "pleuronectiformes": 15,
+      "anoplopoma": 3
+    }
+  }
+]
