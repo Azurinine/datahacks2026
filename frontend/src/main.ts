@@ -4,7 +4,7 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { createAssetRegistry, type AssetRegistry } from './assets';
+import { createAssetRegistry, type AssetRegistry, type CoralConfig } from './assets';
 
 interface PopulationYear {
     year: number;
@@ -51,7 +51,7 @@ composer.addPass(blurPass);
 // Lighting
 const ambientLight = new THREE.AmbientLight(0x1a3a5e, 0.1); 
 scene.add(ambientLight);
-const headlight = new THREE.SpotLight(0xffffff, 500, 80, Math.PI / 6, 0.1, 2);
+const headlight = new THREE.SpotLight(0xffffff, 50, 80, Math.PI / 6, 0.1, 2);
 headlight.position.set(0, 0, 0);
 camera.add(headlight);
 const headlightTarget = new THREE.Object3D();
@@ -76,7 +76,11 @@ const controls = new PointerLockControls(camera, document.body);
 const instructions = document.getElementById('instructions')!;
 instructions.addEventListener('click', () => controls.lock());
 controls.addEventListener('lock', () => instructions.style.opacity = '0');
-controls.addEventListener('unlock', () => instructions.style.opacity = '1');
+controls.addEventListener('unlock', () => {
+    if (fishPopup.style.display !== 'block') {
+        instructions.style.opacity = '1';
+    }
+});
 const moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false };
 const velocity = new THREE.Vector3();
 const direction = new THREE.Vector3();
@@ -89,6 +93,8 @@ const fishPopup = document.getElementById('fish-popup')!;
 const fishNameEl = document.getElementById('fish-name')!;
 const fishDescEl = document.getElementById('fish-desc')!;
 const popupClose = document.getElementById('popup-close')!;
+
+fishPopup.addEventListener('click', (e) => e.stopPropagation());
 
 let populations: PopulationYear[] = [];
 
@@ -130,8 +136,11 @@ function updateBrightness(val: number) {
     beamMaterial.uniforms.opacity.value = (val / 3) * 0.4;
 }
 brightnessSlider.addEventListener('input', (e) => updateBrightness(parseFloat((e.target as HTMLInputElement).value)));
+brightnessSlider.addEventListener('click', (e) => e.stopPropagation());
+yearSlider.addEventListener('click', (e) => e.stopPropagation());
 
-popupClose.addEventListener('click', () => {
+popupClose.addEventListener('click', (e) => {
+    e.stopPropagation();
     fishPopup.style.display = 'none';
     isPaused = false;
     document.getElementById('pause-indicator')!.style.display = 'none';
@@ -142,37 +151,94 @@ popupClose.addEventListener('click', () => {
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-window.addEventListener('click', () => {
-    if (!controls.isLocked || isPaused) return;
+window.addEventListener('mousemove', (event) => {
+    if (!controls.isLocked) {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    } else {
+        mouse.x = 0;
+        mouse.y = 0;
+    }
+});
 
-    // Center of screen
-    mouse.x = 0;
-    mouse.y = 0;
+window.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return; // Only left click
+    if (!controls.isLocked && !isPaused) return; 
+
     raycaster.setFromCamera(mouse, camera);
 
-    const intersects = raycaster.intersectObject(assets.fishMesh);
+    const fishIntersects = raycaster.intersectObject(assets.fishHitboxMesh);
+    const coralIntersects = raycaster.intersectObjects(assets.coralsGroup.children, true);
 
-    if (intersects.length > 0) {
-        const instanceId = intersects[0].instanceId;
-        if (instanceId !== undefined) {
-            const data = assets.fishData[instanceId];
-            const speciesId = fishConfigs[data.schoolId].id;
+    let targetId = -1;
+    let targetSpecies = "";
+
+    // 1. DIRECT HIT PRIORITY (Fish > Coral)
+    if (fishIntersects.length > 0) {
+        targetId = fishIntersects[0].instanceId!;
+        targetSpecies = fishConfigs[assets.fishData[targetId].schoolId % fishConfigs.length].id;
+    } else if (coralIntersects.length > 0) {
+        let obj = coralIntersects[0].object;
+        while (obj.parent && obj.userData.type !== 'coral') {
+            obj = obj.parent;
+        }
+        const data = obj.userData;
+        if (data.type === 'coral') {
+            showPopup(data.name.toUpperCase(), data.desc);
+            return; // Exit early since we hit a coral
+        }
+    } else {
+        // 2. PROXIMITY FALLBACK: Only if we missed EVERYTHING
+        let minDist = Infinity;
+        const maxProximity = 2.5; // Tighter radius
+        
+        const _pos = new THREE.Vector3();
+        const _mat = new THREE.Matrix4();
+
+        for (let i = 0; i < FISH_COUNT; i++) {
+            const data = assets.fishData[i];
+            if (data.scale <= 0) continue;
+
+            assets.fishMesh.getMatrixAt(i, _mat);
+            _pos.setFromMatrixPosition(_mat);
+            const dist = raycaster.ray.distanceToPoint(_pos);
             
-            // Find species config
-            const config = fishConfigs.find(c => c.id === speciesId);
-            if (config) {
-                fishNameEl.innerText = speciesId.toUpperCase();
-                fishDescEl.innerText = `Detailed scan for ${speciesId} sequence complete. Species is exhibiting normal migration patterns for the current simulated year.`;
-                fishPopup.style.display = 'block';
-                
-                // Freeze time
-                isPaused = true;
-                document.getElementById('pause-indicator')!.style.display = 'flex';
-                controls.unlock();
+            if (dist < maxProximity && dist < minDist) {
+                minDist = dist;
+                targetId = i;
             }
+        }
+
+        if (targetId !== -1) {
+            targetSpecies = fishConfigs[assets.fishData[targetId].schoolId % fishConfigs.length].id;
+        }
+    }
+
+    if (targetId !== -1) {
+        const config = fishConfigs.find(c => c.id === targetSpecies);
+        if (config) {
+            showPopup(targetSpecies.toUpperCase(), config.desc || `Detailed scan for ${targetSpecies} sequence complete.`);
+        }
+    } else if (coralIntersects.length > 0) {
+        let obj = coralIntersects[0].object;
+        while (obj.parent && obj.userData.type !== 'coral') {
+            obj = obj.parent;
+        }
+        const data = obj.userData;
+        if (data.type === 'coral') {
+            showPopup(data.name.toUpperCase(), data.desc);
         }
     }
 });
+
+function showPopup(title: string, desc: string) {
+    fishNameEl.innerText = title;
+    fishDescEl.innerText = desc;
+    fishPopup.style.display = 'block';
+    isPaused = true;
+    document.getElementById('pause-indicator')!.style.display = 'flex';
+    controls.unlock();
+}
 
 // Floor
 const floorGeometry = new THREE.PlaneGeometry(120, 160, 64, 80);
@@ -191,39 +257,51 @@ const floor = new THREE.Mesh(floorGeometry, floorMaterial);
 scene.add(floor);
 
 // Assets
-const fishConfigs = [
-    { id: 'chromis', color: 0x55aaff, count: 300, speedMultiplier: 1.0, scale: 1.0, preferredHeight: 3.0 },
-    { id: 'clownfish', color: 0xffaa55, count: 300, speedMultiplier: 1.2, scale: 0.8, preferredHeight: 2.0 },
-    { id: 'tang', color: 0x55ffaa, count: 300, speedMultiplier: 0.8, scale: 1.2, preferredHeight: 4.0 },
-    { id: 'anthias', color: 0xff55aa, count: 300, speedMultiplier: 1.5, scale: 0.9, preferredHeight: 2.5 },
-    { id: 'garibaldi', color: 0xffa500, count: 300, speedMultiplier: 1.1, scale: 1.3, preferredHeight: 3.5 },
-    { id: 'rockfish', color: 0xff4500, count: 300, speedMultiplier: 0.7, scale: 1.1, preferredHeight: 1.5 },
-    { id: 'sheephead', color: 0x8b0000, count: 300, speedMultiplier: 0.9, scale: 1.5, preferredHeight: 2.0 },
-    { id: 'senorita', color: 0xffff00, count: 300, speedMultiplier: 1.3, scale: 0.7, preferredHeight: 4.5 },
-    { id: 'kelpbass', color: 0x556b2f, count: 300, speedMultiplier: 1.0, scale: 1.2, preferredHeight: 2.5 },
-];
-const FISH_COUNT = fishConfigs.reduce((s, c) => s + c.count, 0);
-
+let fishConfigs: any[] = [];
+let FISH_COUNT = 0;
 const speciesOffset: { [id: string]: number } = {};
-let currentOffset = 0;
-fishConfigs.forEach(cfg => {
-    speciesOffset[cfg.id] = currentOffset;
-    currentOffset += cfg.count;
-});
 
-const assets: AssetRegistry = createAssetRegistry(fishConfigs);
-scene.add(assets.fishMesh); scene.add(assets.coralsGroup); scene.add(assets.sunRaysGroup); scene.add(assets.geographyGroup); scene.add(assets.environmentGroup); scene.add(assets.seaweedsGroup);
+let assets: AssetRegistry;
+const TOTAL_CORAL_CAP = 1200; // Fewer clusters for better performance
 
-fetch('/data/populations.json')
-    .then(res => res.json())
-    .then(data => {
-        populations = data;
-        syncPopulations(2014); // Initial sync
+async function init() {
+    const [popData, coralReg, fishMeta] = await Promise.all([
+        fetch('/data/populations.json').then(res => res.json()),
+        fetch('/data/corals_registry.json').then(res => res.json()),
+        fetch('/data/fish_metadata.json').then(res => res.json())
+    ]);
+
+    populations = popData;
+    fishConfigs = fishMeta.map((f: any) => ({
+        ...f,
+        color: parseInt(f.color.replace('#', '0x'))
+    }));
+
+    FISH_COUNT = fishConfigs.reduce((s, c) => s + c.count, 0);
+
+    let currentOffset = 0;
+    fishConfigs.forEach(cfg => {
+        speciesOffset[cfg.id] = currentOffset;
+        currentOffset += cfg.count;
     });
+
+    const coralConfigs: CoralConfig[] = coralReg.map((c: any) => ({
+        ...c,
+        count: Math.floor(c.proportion * TOTAL_CORAL_CAP)
+    }));
+
+    assets = createAssetRegistry(fishConfigs, coralConfigs);
+    scene.add(assets.fishMesh); scene.add(assets.fishHitboxMesh); scene.add(assets.coralsGroup); scene.add(assets.sunRaysGroup); scene.add(assets.geographyGroup); scene.add(assets.environmentGroup); scene.add(assets.seaweedsGroup);
+
+    syncPopulations(2014);
+    updateYear(2014);
+
+    animate();
+}
 
 const dyingColor = new THREE.Color(0x445566), tempColor = new THREE.Color();
 function updateFish(vitality: number) {
-    if (assets.fishMesh.instanceColor) {
+    if (assets && assets.fishMesh && assets.fishMesh.instanceColor) {
         for (let i = 0; i < FISH_COUNT; i++) {
             tempColor.copy(dyingColor).lerp(assets.fishData[i].originalColor, vitality);
             assets.fishMesh.setColorAt(i, tempColor);
@@ -237,6 +315,18 @@ function updateYear(year: number) {
     const simulatedPH = 8.1 - (yearsPassed * 0.04), simulatedTemp = 10.0 + (yearsPassed * 0.15);
     applyDataToWorld(simulatedPH, simulatedTemp, 33.5);
     syncPopulations(year);
+
+    // Coral Bleaching
+    const greyColor = new THREE.Color(0xcccccc);
+    assets.coralsGroup.children.forEach(speciesMesh => {
+        const data = speciesMesh.userData;
+        if (data.type === 'coral') {
+            const isBleached = year >= data.bleach_year;
+            const targetColor = isBleached ? greyColor : data.originalColor;
+            const mat = (speciesMesh as THREE.Mesh).material as THREE.MeshStandardMaterial;
+            mat.color.copy(targetColor);
+        }
+    });
 }
 
 function syncPopulations(year: number) {
@@ -262,10 +352,7 @@ function applyDataToWorld(pH: number, temp: number, _salinity: number) {
     document.getElementById('stat-temp')!.innerText = temp.toFixed(1) + " °C";
     document.getElementById('stat-vit')!.innerText = (vitality*100).toFixed(0) + "%";
     updateFish(vitality);
-    const healthyColor = new THREE.Color(0xff6b81), bleachedColor = new THREE.Color(0xe0e0e0);
-    assets.coralMaterial.color.copy(bleachedColor.clone().lerp(healthyColor, vitality));
 }
-applyDataToWorld(8.1, 10.0, 33.5);
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
@@ -316,6 +403,13 @@ function animate() {
 
     assets.sunRayMaterial.opacity = Math.max(0, 0.04 * (1.0 - depthLerp));
 
+    // Seaweed wiggle
+    if (assets && assets.seaweedMaterials) {
+        assets.seaweedMaterials.forEach(mat => {
+            mat.uniforms.time.value = time * 0.001;
+        });
+    }
+
     if (!isPaused) {
         const schoolPositions = [
             new THREE.Vector3(Math.sin(time*0.0002)*15, 2.5, Math.cos(time*0.0001)*80),
@@ -353,10 +447,13 @@ function animate() {
                 dummy.scale.set(finalScale, finalScale, finalScale);
                 dummy.updateMatrix(); 
                 assets.fishMesh.setMatrixAt(i, dummy.matrix);
+                assets.fishHitboxMesh.setMatrixAt(i, dummy.matrix);
             }
         }
         assets.fishMesh.instanceMatrix.needsUpdate = true;
+        assets.fishHitboxMesh.instanceMatrix.needsUpdate = true;
     }
     composer.render();
 }
-animate();
+
+init();

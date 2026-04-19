@@ -1,0 +1,34 @@
+[
+  { 
+    "id": "brain_coral", 
+    "name": "Brain Coral", 
+    "color": "#ff6b81", 
+    "bleach_year": 2022, 
+    "proportion": 0.2,
+    "desc": "Slower-growing, dense corals that look like a human brain. They are very long-lived."
+  },
+  { 
+    "id": "staghorn_coral", 
+    "name": "Staghorn Coral", 
+    "color": "#00ffaa", 
+    "bleach_year": 2018, 
+    "proportion": 0.3,
+    "desc": "Branching coral that grows quickly but is highly sensitive to rising ocean temperatures."
+  },
+  { 
+    "id": "elkhorn_coral", 
+    "name": "Elkhorn Coral", 
+    "color": "#ffaa55", 
+    "bleach_year": 2019, 
+    "proportion": 0.25,
+    "desc": "Named for its antler-like branches, these corals provide critical habitat for fish species."
+  },
+  { 
+    "id": "pillar_coral", 
+    "name": "Pillar Coral", 
+    "color": "#ff55aa", 
+    "bleach_year": 2024, 
+    "proportion": 0.25,
+    "desc": "Tall, column-like structures that form unique vertical habitats in the reef ecosystem."
+  }
+]
