@@ -14,6 +14,7 @@ export interface AssetRegistry {
     fishMesh: THREE.InstancedMesh;
     fishHitboxMesh: THREE.InstancedMesh; // Added for easier clicking
     coralsGroup: THREE.Group;
+    coralGlobalUniforms: { time: { value: number } };
     geographyGroup: THREE.Group;
     environmentGroup: THREE.Group;
     fishData: { 
@@ -177,7 +178,44 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
 
     // --- Reef ---
     const coralsGroup = new THREE.Group();
-    const coralMaterial = new THREE.MeshStandardMaterial({ color: 0xff6b81, flatShading: true });
+    const coralGlobalUniforms = { time: { value: 0 } };
+    const coralMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xdddddd, 
+        flatShading: true,
+        roughness: 0.7,
+        metalness: 0.1
+    });
+
+    coralMaterial.onBeforeCompile = (shader) => {
+        shader.uniforms.time = coralGlobalUniforms.time;
+        
+        // Vertex sway
+        shader.vertexShader = `
+            uniform float time;
+            ${shader.vertexShader}
+        `.replace(
+            `#include <begin_vertex>`,
+            `#include <begin_vertex>
+            // Subtle sway based on position and time
+            float sway = sin(time * 1.5 + position.x * 0.8 + position.z * 0.8) * 0.08 * max(0.0, position.y - 1.0);
+            transformed.x += sway;
+            transformed.z += sway * 0.5;
+            `
+        );
+        
+        // Fragment pulse
+        shader.fragmentShader = `
+            uniform float time;
+            ${shader.fragmentShader}
+        `.replace(
+            `#include <emissivemap_fragment>`,
+            `#include <emissivemap_fragment>
+            // Simple pulsing effect applied to emissive radiance
+            float pulse = sin(time * 2.0) * 0.25 + 0.75;
+            totalEmissiveRadiance *= pulse;
+            `
+        );
+    };
     
     // Distribute corals based on configs
     coralConfigs.forEach(cfg => {
@@ -224,8 +262,14 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
 
         if (speciesGeometries.length > 0) {
             const mergedSpeciesGeo = BufferGeometryUtils.mergeGeometries(speciesGeometries);
-            const speciesMesh = new THREE.Mesh(mergedSpeciesGeo, coralMaterial.clone());
-            (speciesMesh.material as THREE.MeshStandardMaterial).color.copy(speciesColor);
+            
+            // Clone the upgraded material and set species-specific colors
+            const mat = coralMaterial.clone();
+            mat.color.copy(speciesColor);
+            mat.emissive.copy(speciesColor);
+            mat.emissiveIntensity = 1.15;
+
+            const speciesMesh = new THREE.Mesh(mergedSpeciesGeo, mat);
             
             speciesMesh.userData = { 
                 type: 'coral', 
@@ -233,7 +277,8 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
                 name: cfg.name, 
                 desc: cfg.desc, 
                 bleach_year: cfg.bleach_year,
-                originalColor: speciesColor.clone()
+                originalColor: speciesColor.clone(),
+                hasBeenStressed: false
             };
             coralsGroup.add(speciesMesh);
         }
@@ -287,7 +332,7 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
                 vUv = uv;
                 vec3 pos = position;
                 // Wiggle: intensity increases with height
-                float wiggle = sin(time * 1.5 + position.y * 0.5) * (heightFromBase * 0.15);
+                float wiggle = sin(time * 1.5 + position.x * 0.5 + position.z * 0.5) * (heightFromBase * 0.15);
                 pos.x += wiggle;
                 pos.z += wiggle * 0.5;
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -335,8 +380,19 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
         sunRaysGroup.add(mesh);
     }
 
+    // --- Ambient Dust ---
+    const dustGeometry = new THREE.BufferGeometry();
+    const dustCount = 4000;
+    const dustPositions = new Float32Array(dustCount * 3);
+    for (let i = 0; i < dustCount * 3; i++) {
+        dustPositions[i] = (Math.random() - 0.5) * 200;
+    }
+    dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+    const dustMaterial = new THREE.PointsMaterial({ color: 0x888888, size: 0.05, transparent: true, opacity: 0.3 });
+    environmentGroup.add(new THREE.Points(dustGeometry, dustMaterial));
+
     return {
-        fishMesh, fishHitboxMesh, coralsGroup, geographyGroup, environmentGroup, fishData, rockSpheres,
+        fishMesh, fishHitboxMesh, coralsGroup, coralGlobalUniforms, geographyGroup, environmentGroup, fishData, rockSpheres,
         fishMaterial, coralMaterial, rockMaterial, seaweedsGroup, seaweedMaterials,
         sunRaysGroup, sunRayMaterial
     };
@@ -344,7 +400,7 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
 
 export function setupInteractivePreview(
     canvas: HTMLCanvasElement,
-    type: 'fish' | 'coral',
+    type: 'fish' | 'coral' | 'unknown',
     config: { id: string; color: number | string }
 ): () => void {
     const W = canvas.width, H = canvas.height;
@@ -366,13 +422,14 @@ export function setupInteractivePreview(
     const pivot = new THREE.Object3D();
     thumbScene.add(pivot);
 
-    let mesh: THREE.Mesh;
+    let mesh: THREE.Mesh | undefined;
     if (type === 'fish') {
         const geo = new THREE.ConeGeometry(0.15, 0.8, 4);
         geo.rotateX(Math.PI / 2);
         mesh = new THREE.Mesh(geo, mat);
-        pivot.rotation.y = Math.PI / 2; // show cone profile sideways
-    } else {
+        pivot.rotation.y = Math.PI * 0.4; // 3/4 side view
+        pivot.rotation.x = 0.2; // Slight tilt
+    } else if (type === 'coral') {
         const geos: THREE.BufferGeometry[] = [];
         const pieceCount = 15 + Math.floor(Math.random() * 15);
         for (let i = 0; i < pieceCount; i++) {
@@ -384,10 +441,24 @@ export function setupInteractivePreview(
             geos.push(geo);
         }
         mesh = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(geos), mat);
+        pivot.rotation.y = Math.PI * 0.2;
+    } else if (type === 'unknown') {
+        // Create a large '?' using a texture or just a simple geometry for now
+        // For simplicity and to avoid font loading issues, we'll use a stylized "X" or just leave it empty with a placeholder
+        // Actually, we can just use a Sphere with a wireframe or something technical
+        const geo = new THREE.IcosahedronGeometry(1.5, 1);
+        const wireMat = new THREE.MeshBasicMaterial({ color: 0x557788, wireframe: true, transparent: true, opacity: 0.3 });
+        mesh = new THREE.Mesh(geo, wireMat);
+        
+        // Add a smaller solid core
+        const coreGeo = new THREE.IcosahedronGeometry(0.5, 0);
+        const coreMesh = new THREE.Mesh(coreGeo, new THREE.MeshBasicMaterial({ color: 0x557788 }));
+        pivot.add(coreMesh);
     }
-    pivot.add(mesh);
+    
+    if (mesh) pivot.add(mesh);
 
-    const box = new THREE.Box3().setFromObject(mesh);
+    const box = new THREE.Box3().setFromObject(pivot);
     const center = box.getCenter(new THREE.Vector3());
     const boxSize = box.getSize(new THREE.Vector3()).length();
     const thumbCamera = new THREE.PerspectiveCamera(45, W / H, 0.01, 1000);
@@ -474,10 +545,14 @@ export function generateThumbnail(
     const center = box.getCenter(new THREE.Vector3());
     const boxSize = box.getSize(new THREE.Vector3()).length();
     const thumbCamera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
-    thumbCamera.position.copy(center).add(
-        type === 'fish'
-            ? new THREE.Vector3(0, 0, boxSize * 2.5)
-            : new THREE.Vector3(boxSize, boxSize * 0.8, boxSize)
+    
+    // Angle the camera for a 3/4 view
+    const angle = Math.PI * 0.15;
+    const dist = type === 'fish' ? boxSize * 2.5 : boxSize * 1.5;
+    thumbCamera.position.set(
+        center.x + Math.sin(angle) * dist,
+        center.y + (type === 'fish' ? dist * 0.1 : dist * 0.5),
+        center.z + Math.cos(angle) * dist
     );
     thumbCamera.lookAt(center);
 
