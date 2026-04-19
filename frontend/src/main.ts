@@ -134,7 +134,7 @@ function closeFishPopup() {
     fishPopup.style.display = 'none';
     isPaused = false;
     pauseIndicator.style.display = 'none';
-    instructions.style.opacity = '1'; // Show 'Click to Resume' instructions
+    controls.lock(); // Re-lock immediately
 }
 
 function showPopup(id: string, title: string, desc: string) {
@@ -162,7 +162,7 @@ function toggleBingoBook() {
         bingoOverlay.style.display = 'none';
         isPaused = false;
         pauseIndicator.style.display = 'none';
-        instructions.style.opacity = '1'; // Show 'Click to Resume'
+        controls.lock(); // Re-lock immediately
     } else {
         renderBingoBook();
         bingoBookEl.style.display = 'block';
@@ -267,6 +267,7 @@ function updateYear(year: number) {
 instructions.addEventListener('click', () => controls.lock());
 controls.addEventListener('lock', () => {
     instructions.style.opacity = '0';
+    instructions.style.pointerEvents = 'none';
 });
 controls.addEventListener('unlock', () => {
     if (isInternalUnlock) {
@@ -279,7 +280,7 @@ controls.addEventListener('unlock', () => {
         fishPopup.style.display = 'none';
         isPaused = false;
         pauseIndicator.style.display = 'none';
-        return; // Don't show main menu
+        return; 
     }
     
     if (bingoBookEl.style.display === 'block') {
@@ -287,11 +288,19 @@ controls.addEventListener('unlock', () => {
         bingoOverlay.style.display = 'none';
         isPaused = false;
         pauseIndicator.style.display = 'none';
-        return; // Don't show main menu
+        return; 
     }
 
     // 2. If NO submenu is open, show the main instructions menu
     instructions.style.opacity = '1';
+    instructions.style.pointerEvents = 'auto';
+});
+
+document.body.addEventListener('click', () => {
+    if (fishPopup.style.display === 'block' || bingoBookEl.style.display === 'block') return;
+    if (!controls.isLocked && instructions.style.opacity === '0') {
+        controls.lock();
+    }
 });
 
 document.addEventListener('keydown', (event) => {
@@ -355,6 +364,7 @@ window.addEventListener('mousemove', (event) => {
 window.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return; 
     if (bingoBookEl.style.display === 'block') return;
+    if (fishPopup.style.display === 'block') return; // Prevent clicking through popup
     if (!controls.isLocked && !isPaused) return; 
 
     raycaster.setFromCamera(mouse, camera);
