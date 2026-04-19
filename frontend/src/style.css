@@ -288,11 +288,147 @@ body {
     text-shadow: 0 0 8px rgba(0, 255, 170, 0.5);
 }
 
-#panel-settings {
+#panel-controls {
     position: absolute;
     top: 40px;
     right: 40px;
-    width: 240px;
+    width: 260px;
+}
+
+.divider-sm {
+    height: 1px;
+    background: var(--border-color);
+    margin: 15px 0;
+    opacity: 0.5;
+}
+
+/* Bingo Book Floating Trigger (Relocated to Top Left) */
+#bingo-trigger {
+    position: absolute;
+    top: 220px; /* Positioned below the stats panel */
+    left: 40px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    padding: 15px 25px;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 300;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    color: var(--primary);
+}
+
+#bingo-trigger:hover {
+    background: rgba(0, 229, 255, 0.1);
+    border-color: var(--primary);
+    transform: translateX(5px);
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+}
+
+.bingo-notifications {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    display: flex;
+    gap: 5px;
+    z-index: 10;
+}
+
+.bingo-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    animation: badgePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.bingo-badge.new {
+    background: #00ffaa;
+    color: #000;
+}
+
+.bingo-badge.warning {
+    background: #ffcc00;
+    color: #000;
+}
+
+.bingo-badge.critical {
+    background: var(--danger);
+}
+
+@keyframes badgePop {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.trigger-label {
+    display: flex;
+    flex-direction: column;
+}
+
+.main-label {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.key-hint {
+    font-size: 10px;
+    color: #88bbcc;
+    letter-spacing: 1px;
+    margin-top: 2px;
+}
+
+.key-hint kbd {
+    background: rgba(255,255,255,0.1);
+    padding: 1px 4px;
+    border-radius: 2px;
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.bingo-pop {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: #88bbcc;
+    margin-top: 2px;
+}
+
+.bingo-pop.low {
+    color: #ffcc00;
+    text-shadow: 0 0 5px rgba(255, 204, 0, 0.4);
+}
+
+.new-tag {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    background: #00ffaa;
+    color: #000;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 5px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    z-index: 5;
+    box-shadow: 0 0 10px rgba(0, 255, 170, 0.4);
+}
+
+.bingo-slot.half-pop {
+    border-color: rgba(255, 204, 0, 0.6);
+    box-shadow: 0 0 15px rgba(255, 204, 0, 0.2), inset 0 0 10px rgba(255, 204, 0, 0.1);
 }
 
 .setting-row {

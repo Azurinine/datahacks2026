@@ -88,7 +88,6 @@ const controls = new PointerLockControls(camera, document.body);
 const instructions = document.getElementById('instructions')!;
 const yearSlider = document.getElementById('year-slider') as HTMLInputElement;
 const yearValue = document.getElementById('year-value')!;
-const brightnessSlider = document.getElementById('brightness-slider') as HTMLInputElement;
 const fishPopup = document.getElementById('fish-popup')!;
 const fishNameEl = document.getElementById('fish-name')!;
 const fishDescEl = document.getElementById('fish-desc')!;
@@ -104,11 +103,18 @@ const discoveryMapEl = document.getElementById('discovery-map')!;
 const discoveryCardsScroller = document.getElementById('discovery-cards-scroller')!;
 const activeSpeciesTitle = document.getElementById('active-species-title')!;
 const restartBtn = document.getElementById('endgame-restart')!;
+const bingoTrigger = document.getElementById('bingo-trigger')!;
+const notifNewEl = document.getElementById('notif-new')!;
+const notifWarningEl = document.getElementById('notif-warning')!;
+const notifCriticalEl = document.getElementById('notif-critical')!;
 
 // System State
 let isPaused = false;
 let gameEnded = false;
 let missionChart: Chart | null = null;
+let newCount = 0;
+let warningCount = 0;
+let criticalCount = 0;
 let previewDispose: (() => void) | null = null;
 let bingoPreviewDisposes: (() => void)[] = [];
 let headlightOn = true;
@@ -135,8 +141,14 @@ const direction = new THREE.Vector3();
 let populations: PopulationYear[] = [];
 let envByYear: { [year: number]: { avg_ph: number; avg_temp: number; vitality: number } } = {};
 let coralMetadata: any[] = [];
-let discoveryLog: Discovery[] = JSON.parse(localStorage.getItem('discoveryLog') || '[]');
-let discoveredSpecies = new Set<string>(discoveryLog.map(d => d.id));
+
+// Reset on reload
+localStorage.removeItem('discoveryLog');
+localStorage.removeItem('discoveredSpecies');
+let discoveryLog: Discovery[] = [];
+let discoveredSpecies = new Set<string>();
+let newlyDiscoveredSinceLastOpen = new Set<string>();
+
 let needsBingoRender = true;
 let fishConfigs: any[] = [];
 let FISH_COUNT = 0;
@@ -157,14 +169,8 @@ const mouse = new THREE.Vector2();
 // 2. HELPER FUNCTIONS
 // ==========================================
 
-const initialBrightness = parseFloat(brightnessSlider.value);
-headlight.intensity = initialBrightness * 80;
-beamMaterial.uniforms.opacity.value = 0.1 + (initialBrightness / 3) * 0.4;
-
-function updateBrightness(val: number) {
-    headlight.intensity = val * 80; // Scale 0-3 to meaningful light intensity
-    beamMaterial.uniforms.opacity.value = 0.1 + (val / 3) * 0.4;
-}
+headlight.intensity = 100;
+beamMaterial.uniforms.opacity.value = 0.4;
 
 function closeFishPopup() {
     if (previewDispose) { previewDispose(); previewDispose = null; }
@@ -218,8 +224,14 @@ function showPopup(id: string, title: string, desc: string) {
         
         localStorage.setItem('discoveryLog', JSON.stringify(discoveryLog));
         needsBingoRender = true; // Mark for re-render
+        newlyDiscoveredSinceLastOpen.add(id);
         
-        addChatMessage(`NEW DISCOVERY: ${title.toUpperCase()}`, "info");
+        // Green Notification for new discovery
+        newCount++;
+        if (notifNewEl) {
+            notifNewEl.style.display = 'flex';
+            notifNewEl.innerText = newCount.toString();
+        }
     }
 }
 
@@ -250,14 +262,22 @@ function renderBingoBook() {
             const isDiscovered = discoveredSpecies.has(species.id);
             
             // Check status
+            const initialPop = populations.length > 0 ? (populations[0].counts[species.id] || 0) : 0;
             const currentPop = populations.find(p => p.year === currentYear);
+            const currentCount = currentPop ? (currentPop.counts[species.id] || 0) : 0;
             const coralCfg = coralMetadata.find((c: any) => c.id === species.id);
+            
             const isExtinct = currentPop ? (currentPop.counts[species.id] || 0) <= 0 : false;
+            const isAlmostExtinct = !isExtinct && initialPop > 10 && currentCount < initialPop * 0.15;
+            const isHalfPop = !isExtinct && initialPop > 0 && currentCount <= initialPop * 0.5;
             const isBleached = coralCfg && coralCfg.bleach_year !== null && currentYear >= coralCfg.bleach_year;
             const isDead = isExtinct || isBleached;
 
             const slot = document.createElement('div');
-            slot.className = `bingo-slot ${isDiscovered ? 'discovered' : ''} ${isDead ? 'extinct' : ''}`;
+            let classes = `bingo-slot ${isDiscovered ? 'discovered' : ''} ${isDead ? 'extinct' : ''}`;
+            if (!isDiscovered && isAlmostExtinct && !isDead && !coralCfg) classes += ' almost-extinct';
+            if (isHalfPop && !isDead) classes += ' half-pop';
+            slot.className = classes;
             
             const icon = document.createElement('div');
             icon.className = 'bingo-icon';
@@ -274,6 +294,13 @@ function renderBingoBook() {
                 } else {
                     icon.innerText = '✓';
                 }
+
+                if (newlyDiscoveredSinceLastOpen.has(species.id)) {
+                    const newTag = document.createElement('div');
+                    newTag.className = 'new-tag';
+                    newTag.innerText = 'NEW';
+                    slot.appendChild(newTag);
+                }
             } else {
                 icon.innerText = '?';
             }
@@ -288,6 +315,11 @@ function renderBingoBook() {
                 label.className = 'status-label';
                 label.innerText = isBleached ? 'BLEACHED' : 'EXTINCT';
                 slot.appendChild(label);
+            } else if (!isDiscovered && isAlmostExtinct && !coralCfg) {
+                const lbl = document.createElement('div');
+                lbl.className = 'almost-extinct-label';
+                lbl.innerText = 'CRITICAL POPULATION';
+                slot.appendChild(lbl);
             }
 
             const label = document.createElement('div');
@@ -295,6 +327,14 @@ function renderBingoBook() {
             label.innerText = species.name;
             slot.appendChild(icon);
             slot.appendChild(label);
+
+            if (isDiscovered) {
+                const popDisplay = document.createElement('div');
+                popDisplay.className = `bingo-pop ${isHalfPop ? 'low' : ''}`;
+                popDisplay.innerText = `POP: ${currentCount}`;
+                slot.appendChild(popDisplay);
+            }
+
             bingoGridEl.appendChild(slot);
         });
     });
@@ -453,7 +493,16 @@ function toggleBingoBook() {
         pauseIndicator.style.display = 'none';
         controls.lock(); // Re-lock immediately
     } else {
+        newCount = 0;
+        warningCount = 0;
+        criticalCount = 0;
+        if (notifNewEl) notifNewEl.style.display = 'none';
+        if (notifWarningEl) notifWarningEl.style.display = 'none';
+        if (notifCriticalEl) notifCriticalEl.style.display = 'none';
+
+        needsBingoRender = true; // Reset and re-render every time it opens for updated pops
         renderBingoBook();
+        newlyDiscoveredSinceLastOpen.clear(); // Tags disappear after opening
         bingoBookEl.style.display = 'block';
         bingoOverlay.style.display = 'block';
         isPaused = true;
@@ -546,7 +595,6 @@ function updateYear(year: number) {
             warningText.innerText = warning.message;
             warningBanner.classList.add('active');
             
-            // Screen shake effect
             const originalPos = camera.position.clone();
             const shake = { t: 0 };
             new TWEEN.Tween(shake).to({ t: 1 }, 1000).onUpdate(() => {
@@ -556,17 +604,24 @@ function updateYear(year: number) {
                 camera.position.copy(originalPos);
             }).start();
 
-            setTimeout(() => {
-                warningBanner.classList.remove('active');
-            }, 8000);
+            setTimeout(() => warningBanner.classList.remove('active'), 8000);
+            addChatMessage(warning.message, 'critical');
+            return;
         }
         
-        // All warnings go to chat
-        const type = isCritical ? 'critical' : (isWarning ? 'warning' : 'info');
-        // Small staggered delay for multiple messages
-        setTimeout(() => {
-            addChatMessage(warning.message, type);
-        }, idx * 800);
+        // Increment notification badges instead of chat
+        if (isCritical) {
+            criticalCount++;
+            notifCriticalEl.style.display = 'flex';
+            notifCriticalEl.innerText = criticalCount.toString();
+        } else if (isWarning) {
+            warningCount++;
+            notifWarningEl.style.display = 'flex';
+            notifWarningEl.innerText = warningCount.toString();
+        } else {
+            // General info still goes to chat
+            setTimeout(() => addChatMessage(warning.message, 'info'), idx * 800);
+        }
     });
 
     const greyColor = new THREE.Color(0xcccccc);
@@ -680,12 +735,11 @@ document.addEventListener('keyup', (event) => {
     }
 });
 
-brightnessSlider.addEventListener('input', (e) => updateBrightness(parseFloat((e.target as HTMLInputElement).value)));
-brightnessSlider.addEventListener('click', (e) => e.stopPropagation());
 yearSlider.addEventListener('click', (e) => e.stopPropagation());
 yearSlider.addEventListener('input', (e) => updateYear(parseInt((e.target as HTMLInputElement).value)));
 popupClose.addEventListener('click', (e) => { e.stopPropagation(); closeFishPopup(); });
 fishPopup.addEventListener('click', (e) => e.stopPropagation());
+bingoTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleBingoBook(); });
 bingoOverlay.addEventListener('click', () => toggleBingoBook());
 restartBtn.addEventListener('click', () => {
     localStorage.removeItem('discoveryLog');

@@ -58,21 +58,27 @@
         <div class="stat-row"><span class="stat-label">ECO VITALITY</span> <span id="stat-vit" class="stat-value highlight">--</span></div>
       </div>
 
-      <!-- Top Right: System Options -->
-      <div id="panel-settings" class="hud-panel">
-        <div class="panel-header">SYSTEM RIG</div>
-        <div class="setting-row">
-          <label for="brightness-slider" class="stat-label">HEADLIGHT <kbd>F</kbd></label>
-          <input type="range" id="brightness-slider" min="0" max="3" step="0.1" value="1.2">
+      <!-- Bingo Book Floating Icon (Relocated to Top Left) -->
+      <div id="bingo-trigger">
+        <div class="bingo-notifications">
+          <div id="notif-new" class="bingo-badge new" style="display: none;">0</div>
+          <div id="notif-warning" class="bingo-badge warning" style="display: none;">0</div>
+          <div id="notif-critical" class="bingo-badge critical" style="display: none;">0</div>
         </div>
-        <div class="setting-row menu-hint">
-          <span class="stat-label">PRESS <kbd>M</kbd> FOR MENU</span>
+        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+        <div class="trigger-label">
+          <span class="main-label">FIELD BINGO BOOK</span>
+          <span class="key-hint">PRESS <kbd>TAB</kbd> TO OPEN</span>
         </div>
       </div>
 
-      <!-- Top Right: Timeline Controls -->
-      <div id="panel-settings" class="hud-panel">
-        <div class="panel-header">TEMPORAL RIG</div>
+      <!-- Top Right: Mission Controls -->
+      <div id="panel-controls" class="hud-panel">
+        <div class="panel-header">MISSION CONTROLS</div>
+        
         <div id="year-display">YEAR // <span id="year-value" class="highlight">2014</span></div>
         <div id="slider-wrapper">
           <input type="range" id="year-slider" min="2014" max="2026" value="2014" step="1">
@@ -80,7 +86,10 @@
         <div id="year-progress-bar">
             <div id="year-progress-fill"></div>
         </div>
-        <div class="setting-row menu-hint">
+
+        <div class="divider-sm"></div>
+
+        <div class="setting-row menu-hint" style="margin-top: 0; padding-top: 0; border-top: none;">
           <span class="stat-label">PRESS <kbd>M</kbd> FOR MENU</span>
         </div>
       </div>
