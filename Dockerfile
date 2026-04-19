@@ -1,34 +1,36 @@
-# Build Stage
+# Stage 1: Build the Vite app
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package.json and package-lock.json first to leverage Docker cache
+# Copy package files from the frontend directory
 COPY frontend/package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Use npm install instead of npm ci to bypass lockfile out-of-sync errors
+RUN npm install
 
-# Copy the rest of the application code
+# Copy the rest of the frontend source
 COPY frontend/ ./
 
-# Build the application
+# Build the project
 RUN npm run build
 
-# Production Stage
-FROM node:20-alpine
+# Stage 2: Serve the app with Nginx
+FROM nginx:alpine
 
-WORKDIR /app
+# Copy the build output from the builder stage to Nginx's serve directory
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Only copy over the built output and node_modules necessary to run `vite preview`
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
+# Create a custom Nginx config to handle SPA routing and the Cloud Run port
+RUN echo 'server { \
+    listen 8080; \
+    location / { \
+        root /usr/share/nginx/html; \
+        index index.html; \
+        try_files $uri $uri/ /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
 
-# The default port Cloud Run expects
-ENV PORT=8080
+EXPOSE 8080
 
-EXPOSE $PORT
-
-# Start the application using Vite's preview mode, binding to 0.0.0.0
-CMD ["npm", "run", "start"]
+CMD ["nginx", "-g", "daemon off;"]
