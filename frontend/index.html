@@ -37,9 +37,6 @@
       <div id="warning-text"></div>
     </div>
 
-    <!-- Minecraft style chat -->
-    <div id="chat-container"></div>
-
     <div id="pause-indicator">
       <div class="pause-bar"></div>
       <div class="pause-bar"></div>
@@ -110,7 +107,10 @@
     <!-- Bingo Book -->
     <div id="bingo-overlay"></div>
     <div id="bingo-book" class="hud-panel">
-      <div class="panel-header">FIELD BINGO BOOK [ TAB TO CLOSE ]</div>
+      <div class="panel-header">
+        FIELD BINGO BOOK [ TAB OR X TO CLOSE ]
+        <div id="bingo-close" style="font-size: 20px; line-height: 1; cursor: pointer; color: var(--text-muted); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); margin-top: -2px;">×</div>
+      </div>
       <div id="bingo-grid"></div>
     </div>
 

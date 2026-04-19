@@ -606,42 +606,6 @@ body {
     to { transform: translate(-50%, -50%) scale(1.02); border-color: #ff8888; box-shadow: 0 0 70px rgba(255, 0, 0, 0.8); }
 }
 
-/* Chat System - Minecraft Style */
-#chat-container {
-    position: absolute;
-    bottom: 40px;
-    left: 40px;
-    width: 550px;
-    max-height: 350px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 4px;
-    pointer-events: none;
-    z-index: 350;
-    mask-image: linear-gradient(to top, black 80%, transparent 100%);
-}
-
-.chat-msg {
-    background: rgba(0, 0, 0, 0.5);
-    padding: 6px 12px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 18px;
-    line-height: 1.4;
-    text-shadow: 1px 1px 1px #000;
-    animation: chatIn 0.2s ease-out;
-    border-left: 3px solid transparent;
-}
-
-.chat-msg.info { border-left-color: #55ff55; color: #fff; }
-.chat-msg.warning { border-left-color: #ffff55; color: #ffff55; }
-.chat-msg.critical { border-left-color: #ff5555; color: #ff5555; background: rgba(80, 0, 0, 0.6); }
-
-@keyframes chatIn {
-    from { transform: translateX(-20px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
 /* Range Input Styling (Keep for any remaining sliders) */
 input[type=range] {
     -webkit-appearance: none;
@@ -761,7 +725,7 @@ input[type=range]::-webkit-slider-thumb:hover {
     margin-top: -2px;
 }
 
-#popup-close:hover { 
+#popup-close:hover, #bingo-close:hover { 
     color: var(--danger); 
     transform: rotate(90deg);
 }
@@ -800,15 +764,15 @@ input[type=range]::-webkit-slider-thumb:hover {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 95%;
-    max-width: 1600px;
-    height: 90%;
+    width: 80%;
+    max-width: 1200px;
+    height: 75%;
     display: none;
     z-index: 900;
     overflow-y: auto;
     border: 1px solid var(--border-color);
     background: rgba(15, 23, 42, 0.95);
-    padding: 60px;
+    padding: 40px;
     border-radius: 20px;
     box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8);
 }

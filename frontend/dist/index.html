@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-Cs_EdO2a.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-Cusf3CZc.css">
+    <script type="module" crossorigin src="/assets/index-CDQIAsYW.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DV__fIrP.css">
   </head>
   <body>
     <div id="temp-tint" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(244, 63, 94, 0.2) 0%, rgba(244, 63, 94, 0.4) 100%); pointer-events: none; z-index: 50; opacity: 0; transition: opacity 1.5s ease-in-out;"></div>
@@ -38,9 +38,6 @@
       <div id="warning-header">SYSTEM ALERT</div>
       <div id="warning-text"></div>
     </div>
-
-    <!-- Minecraft style chat -->
-    <div id="chat-container"></div>
 
     <div id="pause-indicator">
       <div class="pause-bar"></div>
@@ -112,7 +109,10 @@
     <!-- Bingo Book -->
     <div id="bingo-overlay"></div>
     <div id="bingo-book" class="hud-panel">
-      <div class="panel-header">FIELD BINGO BOOK [ TAB TO CLOSE ]</div>
+      <div class="panel-header">
+        FIELD BINGO BOOK [ TAB OR X TO CLOSE ]
+        <div id="bingo-close" style="font-size: 20px; line-height: 1; cursor: pointer; color: var(--text-muted); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); margin-top: -2px;">×</div>
+      </div>
       <div id="bingo-grid"></div>
     </div>
 

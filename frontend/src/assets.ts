@@ -127,11 +127,32 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
         environmentGroup.add(new THREE.Mesh(mergedSandGeo, sandMat));
     }
 
-    const domeGeo = new THREE.SphereGeometry(100, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
-    const domeMat = new THREE.MeshBasicMaterial({ color: 0x000205, side: THREE.BackSide, fog: false });
+    const domeGeo = new THREE.SphereGeometry(150, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const domeMat = new THREE.MeshBasicMaterial({ color: 0x002244, side: THREE.BackSide, fog: false });
     const dome = new THREE.Mesh(domeGeo, domeMat);
-    dome.position.y = -5;
+    dome.position.y = -10;
     environmentGroup.add(dome);
+
+    // --- Distant Scenery (Scale and Depth) ---
+    // Large "mountain" silhouettes in the distance
+    for (let i = 0; i < 6; i++) {
+        const dist = 120 + Math.random() * 20;
+        const angle = (i / 6) * Math.PI * 2;
+        const size = 40 + Math.random() * 30;
+        const geo = new THREE.IcosahedronGeometry(size, 1);
+        const mat = new THREE.MeshStandardMaterial({ 
+            color: 0x001a33, 
+            roughness: 1.0, 
+            flatShading: true,
+            emissive: 0x001122,
+            emissiveIntensity: 0.1
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(Math.cos(angle) * dist, -size * 0.4, Math.sin(angle) * dist);
+        mesh.scale.set(1, 1.5 + Math.random(), 1);
+        mesh.rotation.y = Math.random() * Math.PI;
+        environmentGroup.add(mesh);
+    }
 
     const ceilingGeo = new THREE.PlaneGeometry(200, 200);
     const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x0088dd, transparent: true, opacity: 0.6, side: THREE.DoubleSide, roughness: 0.1, metalness: 0.8 });
@@ -182,7 +203,7 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
     const coralMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xdddddd, 
         flatShading: true,
-        roughness: 0.7,
+        roughness: 0.8,
         metalness: 0.1
     });
 
@@ -200,19 +221,6 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
             float sway = sin(time * 1.5 + position.x * 0.8 + position.z * 0.8) * 0.08 * max(0.0, position.y - 1.0);
             transformed.x += sway;
             transformed.z += sway * 0.5;
-            `
-        );
-        
-        // Fragment pulse
-        shader.fragmentShader = `
-            uniform float time;
-            ${shader.fragmentShader}
-        `.replace(
-            `#include <emissivemap_fragment>`,
-            `#include <emissivemap_fragment>
-            // Simple pulsing effect applied to emissive radiance
-            float pulse = sin(time * 2.0) * 0.25 + 0.75;
-            totalEmissiveRadiance *= pulse;
             `
         );
     };
@@ -266,8 +274,6 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
             // Clone the upgraded material and set species-specific colors
             const mat = coralMaterial.clone();
             mat.color.copy(speciesColor);
-            mat.emissive.copy(speciesColor);
-            mat.emissiveIntensity = 1.15;
 
             const speciesMesh = new THREE.Mesh(mergedSpeciesGeo, mat);
             
@@ -319,6 +325,40 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
         seaweedBuckets[colorIdx].push(seaweedGeo);
     }
 
+    // --- Border Kelp (Very Tall Seaweed) ---
+    for (let i = 0; i < 150; i++) {
+        // Place along the edges of the simulation area
+        const side = Math.floor(Math.random() * 4);
+        let x = 0, z = 0;
+        if (side === 0) { x = (Math.random() - 0.5) * 110; z = 85; }
+        else if (side === 1) { x = (Math.random() - 0.5) * 110; z = -85; }
+        else if (side === 2) { x = 55; z = (Math.random() - 0.5) * 200; }
+        else { x = -55; z = (Math.random() - 0.5) * 200; }
+
+        const twist = Math.sin(z * 0.08) * 6;
+        const baseHeight = Math.sin(x * 0.05) * 2 + Math.cos(z * 0.05) * 2 - 5;
+        const wallHeight = Math.pow(Math.abs(x + twist) / 10, 4);
+        const y = baseHeight + Math.min(wallHeight, 12) + 0.1;
+        
+        const height = 15 + Math.random() * 15; // VERY TALL: 15-30 units
+        const kelpGeo = new THREE.PlaneGeometry(0.6, height, 1, 12);
+        
+        const posAttr = kelpGeo.attributes.position;
+        const heightFromBase = new Float32Array(posAttr.count);
+        for(let j=0; j<posAttr.count; j++) {
+            heightFromBase[j] = posAttr.getY(j) + height/2;
+        }
+        kelpGeo.setAttribute('heightFromBase', new THREE.BufferAttribute(heightFromBase, 1));
+        
+        const pos = new THREE.Vector3(x, y + height / 2, z);
+        const rot = new THREE.Euler(0, Math.random() * Math.PI, 0);
+        const matrix = new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromEuler(rot), new THREE.Vector3(1, 1, 1));
+        kelpGeo.applyMatrix4(matrix);
+
+        const colorIdx = Math.floor(Math.random() * seaweedColors.length);
+        seaweedBuckets[colorIdx].push(kelpGeo);
+    }
+
     const SeaweedShader = {
         uniforms: {
             time: { value: 0 },
@@ -366,17 +406,37 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
     // --- Dispersed Sun Rays ---
     const sunRaysGroup = new THREE.Group();
     const sunRayMaterial = new THREE.MeshBasicMaterial({
-        color: 0xeeffff, transparent: true, opacity: 0.03, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
+        color: 0x88ccff, 
+        transparent: true, 
+        opacity: 0.1, 
+        side: THREE.DoubleSide, 
+        blending: THREE.AdditiveBlending, 
+        depthWrite: false
     });
-    for (let i = 0; i < 20; i++) {
-        const h = 400;
-        const geo = new THREE.CylinderGeometry(5, 80 + Math.random() * 40, h, 12, 1, true);
+    
+    // Fewer, larger, more majestic rays
+    for (let i = 0; i < 8; i++) {
+        const h = 500;
+        // Thinner base for more distinct rays
+        const geo = new THREE.CylinderGeometry(1, 15 + Math.random() * 10, h, 16, 1, true);
         const mesh = new THREE.Mesh(geo, sunRayMaterial);
-        const angle = Math.random() * Math.PI * 2;
-        const dist = Math.random() * 80;
-        mesh.position.set(Math.cos(angle) * dist, 150, Math.sin(angle) * dist);
-        mesh.rotation.x = (Math.random() - 0.5) * 0.3;
-        mesh.rotation.z = (Math.random() - 0.5) * 0.3;
+        
+        const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.5;
+        const dist = 30 + Math.random() * 40;
+        
+        mesh.position.set(Math.cos(angle) * dist, 200, Math.sin(angle) * dist);
+        
+        // Tilt them slightly away from center
+        mesh.rotation.x = (Math.random() - 0.5) * 0.4;
+        mesh.rotation.z = (Math.random() - 0.5) * 0.4;
+        
+        // Custom property for animation in main.ts
+        mesh.userData = { 
+            baseOpacity: 0.05 + Math.random() * 0.08,
+            speed: 0.2 + Math.random() * 0.5,
+            offset: Math.random() * Math.PI * 2
+        };
+        
         sunRaysGroup.add(mesh);
     }
 

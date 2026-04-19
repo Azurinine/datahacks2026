@@ -4,7 +4,6 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { createAssetRegistry, setupInteractivePreview, generateThumbnail, warmThumbnailCache, type AssetRegistry, type CoralConfig } from './assets';
 import * as TWEEN from '@tweenjs/tween.js';
 import Chart from 'chart.js/auto';
@@ -28,13 +27,13 @@ interface Discovery {
 // 1. GLOBAL STATE & ENGINE SETUP
 // ==========================================
 const scene = new THREE.Scene();
-const waterSurfaceColor = new THREE.Color(0x44aaff); // Bright Azure
-const waterDeepColor = new THREE.Color(0x003377);    // Clear Deep Blue
-scene.background = new THREE.Color(0x003377); 
-scene.fog = new THREE.FogExp2(waterSurfaceColor, 0.012);
+const waterSurfaceColor = new THREE.Color(0x0088ff); // Brighter Azure
+const waterDeepColor = new THREE.Color(0x002244);    // Brighter Deep Blue
+scene.background = new THREE.Color(0x000a1a);        // Keep background dark for silhouettes
+scene.fog = new THREE.Fog(waterSurfaceColor, 10, 130);
 
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
-camera.position.set(0, 5, 10);
+camera.position.set(0, 5, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -43,9 +42,6 @@ document.body.appendChild(renderer.domElement);
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.08, 0.4, 1.0);
-composer.addPass(bloomPass);
 
 const RadialBlurShader = {
     uniforms: { "tDiffuse": { value: null }, "strength": { value: 0.15 }, "center": { value: new THREE.Vector2(0.5, 0.5) } },
@@ -65,9 +61,14 @@ const blurPass = new ShaderPass(RadialBlurShader);
 composer.addPass(blurPass);
 
 // Lighting
-const ambientLight = new THREE.AmbientLight(0x2a5a8e, 0.25); 
+const ambientLight = new THREE.AmbientLight(0x2a5a8e, 0.4); 
 scene.add(ambientLight);
-const headlight = new THREE.SpotLight(0xffffff, 50, 80, Math.PI / 6, 0.1, 2);
+
+const sunLight = new THREE.DirectionalLight(0x88ccff, 1.2);
+sunLight.position.set(20, 100, 20);
+scene.add(sunLight);
+
+const headlight = new THREE.SpotLight(0xffffff, 20, 100, Math.PI / 5, 0.3, 2);
 headlight.position.set(0, 0, 0);
 camera.add(headlight);
 const headlightTarget = new THREE.Object3D();
@@ -96,11 +97,11 @@ const fishPopup = document.getElementById('fish-popup')!;
 const fishNameEl = document.getElementById('fish-name')!;
 const fishDescEl = document.getElementById('fish-desc')!;
 const popupClose = document.getElementById('popup-close')!;
+const bingoClose = document.getElementById('bingo-close')!;
 const bingoBookEl = document.getElementById('bingo-book')!;
 const bingoGridEl = document.getElementById('bingo-grid')!;
 const bingoOverlay = document.getElementById('bingo-overlay')!;
 const pauseIndicator = document.getElementById('pause-indicator')!;
-const chatContainer = document.getElementById('chat-container')!;
 const endgameStatsEl = document.getElementById('endgame-stats')!;
 const endgameOverlay = document.getElementById('endgame-overlay')!;
 const discoveryMapEl = document.getElementById('discovery-map')!;
@@ -108,6 +109,7 @@ const discoveryCardsScroller = document.getElementById('discovery-cards-scroller
 const activeSpeciesTitle = document.getElementById('active-species-title')!;
 const restartBtn = document.getElementById('endgame-restart')!;
 const bingoTrigger = document.getElementById('bingo-trigger')!;
+
 const notifNewEl = document.getElementById('notif-new')!;
 const notifWarningEl = document.getElementById('notif-warning')!;
 const notifCriticalEl = document.getElementById('notif-critical')!;
@@ -120,6 +122,11 @@ const tutorialText = document.getElementById('tutorial-text')!;
 const btnTutorialYes = document.getElementById('btn-tutorial-yes')!;
 const btnTutorialNo = document.getElementById('btn-tutorial-no')!;
 const btnTutorialNext = document.getElementById('btn-tutorial-next')!;
+
+// --- Event Listeners Early Init ---
+popupClose.addEventListener('click', closeFishPopup);
+bingoClose.addEventListener('click', toggleBingoBook);
+bingoTrigger.addEventListener('click', toggleBingoBook);
 
 // System State
 let isPaused = false;
@@ -790,19 +797,6 @@ function applyDataToWorld(pH: number, temp: number) {
     lastIsPHCritical = isPHCritical;
 }
 
-function addChatMessage(msg: string, type: 'info' | 'warning' | 'critical' = 'info') {
-    const el = document.createElement('div');
-    el.className = `chat-msg ${type}`;
-    el.innerText = `[${currentYear}] ${msg}`;
-    chatContainer.appendChild(el);
-    if (chatContainer.children.length > 8) chatContainer.removeChild(chatContainer.firstChild!);
-    
-    // Auto remove after 10 seconds
-    setTimeout(() => {
-        if (el.parentNode === chatContainer) chatContainer.removeChild(el);
-    }, 10000);
-}
-
 function triggerNotificationAnim(el: HTMLElement) {
     el.classList.remove('badge-bounce');
     void el.offsetWidth; // Trigger reflow
@@ -829,7 +823,7 @@ function updateYear(year: number) {
 
     // Narrative Warnings
     const currentYearWarnings = warnings.filter(w => w.year === year);
-    currentYearWarnings.forEach((warning, idx) => {
+    currentYearWarnings.forEach((warning) => {
         const isCritical = warning.message.includes('CRITICAL') || warning.message.includes('FAILURE');
         const isWarning = warning.message.includes('WARNING');
         const isSystemFailure = warning.message.includes('SYSTEM FAILURE');
@@ -849,7 +843,6 @@ function updateYear(year: number) {
             }).start();
 
             setTimeout(() => warningBanner.classList.remove('active'), 8000);
-            addChatMessage(warning.message, 'critical');
             return;
         }
         
@@ -864,9 +857,6 @@ function updateYear(year: number) {
             notifWarningEl.style.display = 'flex';
             notifWarningEl.innerText = warningCount.toString();
             triggerNotificationAnim(notifWarningEl);
-        } else {
-            // General info still goes to chat
-            setTimeout(() => addChatMessage(warning.message, 'info'), idx * 800);
         }
     });
 
@@ -888,19 +878,13 @@ function updateYear(year: number) {
                 
                 if (isBleached) {
                     mat.color.copy(greyColor);
-                    mat.emissive.setHex(0x000000);
-                    mat.emissiveIntensity = 0;
-                } else if (popRatio > 0.5 && !data.hasBeenStressed) {
-                    // Stage 1: Healthy Glow (Above bloom threshold)
-                    mat.color.copy(data.originalColor);
-                    mat.emissive.copy(data.originalColor);
-                    mat.emissiveIntensity = 1.15; 
                 } else {
-                    // Stage 2: Stressed (Below bloom threshold) - Permanent once reached
-                    data.hasBeenStressed = true;
                     mat.color.copy(data.originalColor);
-                    mat.emissive.copy(data.originalColor);
-                    mat.emissiveIntensity = 0.4;
+                }
+                
+                // Track state for animations if needed, but glow is removed
+                if (popRatio <= 0.5) {
+                    data.hasBeenStressed = true;
                 }
             }
         });
@@ -958,8 +942,8 @@ controls.addEventListener('unlock', () => {
         }
         return; 
     }
-    
-    if (bingoBookEl.style.display === 'block') {
+
+    if (instructions.style.opacity === '1') {
         bingoBookEl.style.display = 'none';
         bingoOverlay.style.display = 'none';
         isPaused = false;
@@ -1115,7 +1099,6 @@ window.addEventListener('pointerdown', (event) => {
         if (data.type === 'coral') {
             const isBleached = data.bleach_year !== null && currentYear >= data.bleach_year;
             if (isBleached) {
-                addChatMessage("SENSORS OFFLINE: SPECIMEN UNRESPONSIVE (BLEACHED)", "warning");
                 return;
             }
             showPopup(data.id, data.name.toUpperCase(), data.desc, true);
@@ -1143,7 +1126,6 @@ window.addEventListener('pointerdown', (event) => {
             const currentPop = populations.find(p => p.year === currentYear);
             const isExtinct = currentPop ? (currentPop.counts[config.id] || 0) <= 0 : false;
             if (isExtinct) {
-                addChatMessage("SENSORS OFFLINE: NO VITAL SIGNS DETECTED (EXTINCT)", "warning");
                 return;
             }
             showPopup(config.id, (config.name || targetSpecies).toUpperCase(), config.desc || '', true);
@@ -1167,16 +1149,18 @@ function animate() {
 
     const currentY = camera.position.y, depthLerp = Math.max(0, Math.min(1, (35 - currentY) / 40));
     const currentWaterColor = waterSurfaceColor.clone().lerp(waterDeepColor, depthLerp);
-    scene.background = currentWaterColor;
+    // Background stays darker than fog for silhouette depth
+    scene.background = currentWaterColor.clone().multiplyScalar(0.4);
     
     // Visibility based on depth and pH acidification
     const phMurkiness = Math.max(0, (7.95 - currentGlobalPH) * 1.5);
-    if (scene.fog instanceof THREE.FogExp2) {
+    if (scene.fog instanceof THREE.Fog) {
         scene.fog.color.copy(currentWaterColor);
-        scene.fog.density = (0.05 - (1.0 - depthLerp) * 0.04) + phMurkiness;
+        scene.fog.near = 10;
+        scene.fog.far = Math.max(30, 130 - (depthLerp * 60) - (phMurkiness * 70));
     }
-    ambientLight.intensity = 0.25 + depthLerp * 0.15; 
-
+    ambientLight.intensity = 0.4 + depthLerp * 0.2; 
+    sunLight.intensity = 1.4 * (1.0 - depthLerp);
     if (controls.isLocked === true) {
         const oldPos = camera.position.clone();
         velocity.x -= velocity.x * 5.0 * delta; velocity.z -= velocity.z * 5.0 * delta; velocity.y -= velocity.y * 5.0 * delta;
@@ -1203,7 +1187,19 @@ function animate() {
         if (Math.abs(playerPos.z) > 70) { playerPos.z = Math.sign(playerPos.z) * 70; }
     }
 
-    assets.sunRayMaterial.opacity = Math.max(0, 0.04 * (1.0 - depthLerp));
+    // Dynamic Sun Rays Animation
+    if (assets && assets.sunRaysGroup) {
+        assets.sunRaysGroup.children.forEach((ray: any) => {
+            const data = ray.userData;
+            if (data) {
+                // Gentle pulse
+                const pulse = Math.sin(time * 0.001 * data.speed + data.offset) * 0.3 + 0.7;
+                // Fade out based on depth and opacity
+                ray.material.opacity = data.baseOpacity * pulse * Math.max(0, 1.0 - depthLerp);
+            }
+        });
+    }
+
     if (assets.seaweedMaterials) {
         assets.seaweedMaterials.forEach(mat => mat.uniforms.time.value = time * 0.001);
     }
@@ -1309,12 +1305,10 @@ async function init() {
     scene.add(assets.seaweedsGroup);
 
     updateYear(2013);
-    addChatMessage("SUBMERSIBLE SYSTEMS ONLINE", "info");
-    addChatMessage("ENVIRONMENTAL MONITORING ACTIVE", "info");
 
     // Pre-warm thumbnails for Bingo Book to avoid crash on first open
     warmThumbnailCache(fishConfigs, coralConfigs).then(() => {
-        addChatMessage("FIELD BINGO BOOK READY", "info");
+        // Ready
     });
 
     animate();
