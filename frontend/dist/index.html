@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-DdCnbnFA.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DpM4rLwi.css">
+    <script type="module" crossorigin src="/assets/index-DTRgIuG5.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CBDqsUE4.css">
   </head>
   <body>
     <div id="app"></div>
@@ -58,6 +58,18 @@
         <div class="stat-row"><span class="stat-label">pH LEVEL</span> <span id="stat-ph" class="stat-value">--</span></div>
         <div class="stat-row"><span class="stat-label">TEMPERATURE</span> <span id="stat-temp" class="stat-value">-- °C</span></div>
         <div class="stat-row"><span class="stat-label">ECO VITALITY</span> <span id="stat-vit" class="stat-value highlight">--</span></div>
+      </div>
+
+      <!-- Top Right: System Options -->
+      <div id="panel-settings" class="hud-panel">
+        <div class="panel-header">SYSTEM RIG</div>
+        <div class="setting-row">
+          <label for="brightness-slider" class="stat-label">HEADLIGHT <kbd>F</kbd></label>
+          <input type="range" id="brightness-slider" min="0" max="3" step="0.1" value="1.2">
+        </div>
+        <div class="setting-row menu-hint">
+          <span class="stat-label">PRESS <kbd>M</kbd> FOR MENU</span>
+        </div>
       </div>
 
       <!-- Top Right: Timeline Controls -->
@@ -118,7 +130,7 @@
             <div class="stat-label">SONAR DISCOVERY LOCATIONS</div>
             <div id="discovery-map"></div>
           </div>
-          <button id="endgame-restart" onclick="window.location.reload()">RE-INITIATE DIVE</button>
+          <button id="endgame-restart">RE-INITIATE DIVE</button>
         </div>
       </div>
     </div>
