@@ -132,6 +132,8 @@ const btnTutorialNext = document.getElementById('btn-tutorial-next')!;
 let isPaused = false;
 let gameEnded = false;
 let missionChart: Chart | null = null;
+let chartKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+let chartPulseRaf: number | null = null;
 let newCount = 0;
 let warningCount = 0;
 let criticalCount = 0;
@@ -561,6 +563,13 @@ function renderBingoBook() {
 
 function renderMissionChart(speciesId: string | 'total', title: string, color: string) {
     if (missionChart) missionChart.destroy();
+    if (chartPulseRaf !== null) { cancelAnimationFrame(chartPulseRaf); chartPulseRaf = null; }
+
+    // Remove stale key handler from a previous chart render
+    if (chartKeyHandler) {
+        window.removeEventListener('keydown', chartKeyHandler, true);
+        chartKeyHandler = null;
+    }
 
     // Clear any leftover alert panel from a previous chart render
     document.getElementById('chart-alert-panel')?.remove();
@@ -578,6 +587,8 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
         data = speciesHistory.map(v => (v / initialCount) * 100);
     }
 
+    const yMax = Math.ceil(Math.max(...data) / 10) * 10 + 10;
+
     activeSpeciesTitle.innerText = `${title.toUpperCase()} TREND (2014-2026)`;
 
     const discovery = discoveryLog.find(d => d.id === speciesId);
@@ -590,10 +601,47 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
         alertsByYear.get(w.year)!.push(w.message);
     });
 
+    const alertIndices = years.map((y, i) => alertsByYear.has(y) ? i : -1).filter(i => i !== -1);
+    let activeAlertIdx: number | null = null;
+
     const eventData: (number | null)[] = years.map((y, i) => alertsByYear.has(y) ? data[i] : null);
     const eventRadii = years.map(y => alertsByYear.has(y) ? 7 : 0);
 
     const crosshairPlugin = { id: 'crosshair' };
+
+    // Glow plugin — redraws alert circles with pulsing canvas shadowBlur on top
+    const glowPlugin = {
+        id: 'alertGlow',
+        afterDatasetsDraw(chart: any) {
+            const meta = chart.getDatasetMeta(1);
+            if (!meta?.data) return;
+            const c = chart.ctx;
+            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 400); // 0..1 at ~2.5Hz
+            const outerBlur = 14 + pulse * 34;  // 14..48
+            const alpha = 0.5 + pulse * 0.5;    // 0.5..1.0
+            alertIndices.forEach(dataIdx => {
+                const el = meta.data[dataIdx];
+                if (!el) return;
+                c.save();
+                // Outer soft halo
+                c.shadowColor = '#ff4444';
+                c.shadowBlur = outerBlur;
+                c.beginPath();
+                c.arc(el.x, el.y, 7, 0, Math.PI * 2);
+                c.strokeStyle = `rgba(255, 68, 68, .8)`;
+                c.lineWidth = 2;
+                c.stroke();
+                // Second pass for brighter core ring
+                c.shadowBlur = 24 + pulse * 48;
+                c.beginPath();
+                c.arc(el.x, el.y, 7, 0, Math.PI * 2);
+                c.strokeStyle = '#ff4444';
+                c.lineWidth = 1.5;
+                c.stroke();
+                c.restore();
+            });
+        }
+    };
 
     const canvas = document.getElementById('population-chart') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -638,7 +686,7 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
                 y: {
                     title: { display: true, text: '% OF 2014 POPULATION', color: '#88bbcc', font: { family: 'Share Tech Mono', size: 10 } },
                     beginAtZero: true,
-                    max: 120,
+                    max: yMax,
                     grid: {
                         color: (ctx: any) => ctx.tick.value === 25 ? 'rgba(255, 68, 68, 0.35)' : 'rgba(255, 255, 255, 0.05)',
                         lineWidth: (ctx: any) => ctx.tick.value === 25 ? 1.5 : 1,
@@ -658,7 +706,7 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
                 tooltip: { enabled: false }
             }
         },
-        plugins: [crosshairPlugin]
+        plugins: [crosshairPlugin, glowPlugin]
     });
 
     // Floating alert panel — created inside .chart-container so absolute coords align
@@ -674,23 +722,24 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
         canvas.style.cursor = points.some(p => (p as any).datasetIndex === 1) ? 'pointer' : 'default';
     };
 
-    // Click opens alert panel at the circle's position
-    canvas.onclick = (e: MouseEvent) => {
-        const points = missionChart!.getElementsAtEventForMode(e, 'point', { intersect: true }, true);
-        const hit = points.find(p => (p as any).datasetIndex === 1);
-        if (!hit) {
-            alertPanel.style.display = 'none';
-            return;
-        }
-        const year = years[(hit as any).index];
-        const msgs = alertsByYear.get(year);
-        if (!msgs?.length) return;
+    // Helper: render panel at a given data index
+    const showAlertAtDataIndex = (dataIdx: number) => {
+        const meta = missionChart!.getDatasetMeta(1);
+        const el = meta.data[dataIdx] as any;
+        const year = years[dataIdx];
+        const msgs = alertsByYear.get(year)!;
+        activeAlertIdx = alertIndices.indexOf(dataIdx);
+        const pos = `${activeAlertIdx + 1} / ${alertIndices.length}`;
 
-        const el = (hit as any).element;
         alertPanel.innerHTML = `
             <div class="chart-alert-close">×</div>
             <div class="chart-alert-year">YEAR ${year}</div>
             ${msgs.map((m: string) => `<div class="chart-alert-msg">${m}</div>`).join('')}
+            <div class="chart-alert-nav-hint">
+                <button class="chart-alert-nav-btn" id="chart-nav-prev">←</button>
+                <span class="chart-alert-nav-pos">${pos}</span>
+                <button class="chart-alert-nav-btn" id="chart-nav-next">→</button>
+            </div>
         `;
         alertPanel.style.left = `${el.x}px`;
         alertPanel.style.top = `${el.y}px`;
@@ -699,8 +748,57 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
         alertPanel.querySelector('.chart-alert-close')!.addEventListener('click', (ev) => {
             ev.stopPropagation();
             alertPanel.style.display = 'none';
+            activeAlertIdx = null;
+        });
+
+        alertPanel.querySelector('#chart-nav-prev')!.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const total = alertIndices.length;
+            activeAlertIdx = ((activeAlertIdx ?? 0) - 1 + total) % total;
+            showAlertAtDataIndex(alertIndices[activeAlertIdx]);
+        });
+
+        alertPanel.querySelector('#chart-nav-next')!.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const total = alertIndices.length;
+            activeAlertIdx = ((activeAlertIdx ?? 0) + 1) % total;
+            showAlertAtDataIndex(alertIndices[activeAlertIdx]);
         });
     };
+
+    // Click opens alert panel
+    canvas.onclick = (e: MouseEvent) => {
+        const points = missionChart!.getElementsAtEventForMode(e, 'point', { intersect: true }, true);
+        const hit = points.find(p => (p as any).datasetIndex === 1);
+        if (!hit) {
+            alertPanel.style.display = 'none';
+            activeAlertIdx = null;
+            return;
+        }
+        showAlertAtDataIndex((hit as any).index);
+    };
+
+    // Arrow-key navigation between alert circles (capture phase beats global handler)
+    chartKeyHandler = (e: KeyboardEvent) => {
+        if (alertPanel.style.display !== 'block' || activeAlertIdx === null) return;
+        if (e.code !== 'ArrowLeft' && e.code !== 'ArrowRight') return;
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        const total = alertIndices.length;
+        activeAlertIdx = e.code === 'ArrowRight'
+            ? (activeAlertIdx + 1) % total
+            : (activeAlertIdx - 1 + total) % total;
+        showAlertAtDataIndex(alertIndices[activeAlertIdx]);
+    };
+    window.addEventListener('keydown', chartKeyHandler, true);
+
+    // Pulse loop — drives continuous glow animation on alert circles
+    const pulse = () => {
+        if (!missionChart) return;
+        missionChart.update('none');
+        chartPulseRaf = requestAnimationFrame(pulse);
+    };
+    chartPulseRaf = requestAnimationFrame(pulse);
 }
 
 function showEndgameStats() {

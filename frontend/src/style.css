@@ -1244,7 +1244,7 @@ input[type=range]::-webkit-slider-thumb:hover {
     border: 1px solid #ff4444;
     border-radius: 4px;
     padding: 10px 12px 10px 12px;
-    width: 180px;
+    width: 250px;
     pointer-events: auto;
     box-shadow: 0 0 20px rgba(255, 68, 68, 0.3), inset 0 0 10px rgba(255, 68, 68, 0.05);
 }
@@ -1264,7 +1264,7 @@ input[type=range]::-webkit-slider-thumb:hover {
 
 .chart-alert-year {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
+    font-size: 20px;
     font-weight: 700;
     letter-spacing: 3px;
     color: #ff4444;
@@ -1275,7 +1275,7 @@ input[type=range]::-webkit-slider-thumb:hover {
 
 .chart-alert-msg {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
+    font-size: 15px;
     color: #ffaaaa;
     line-height: 1.5;
     padding: 3px 0 3px 8px;
@@ -1286,6 +1286,44 @@ input[type=range]::-webkit-slider-thumb:hover {
 }
 
 .chart-alert-msg:last-child { margin-bottom: 0; }
+
+.chart-alert-nav-hint {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 68, 68, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.chart-alert-nav-btn {
+    background: rgba(255, 68, 68, 0.15);
+    border: 1px solid rgba(255, 68, 68, 0.35);
+    border-radius: 4px;
+    color: #ff9999;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 15px;
+    padding: 2px 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    line-height: 1.4;
+}
+
+.chart-alert-nav-btn:hover {
+    background: rgba(255, 68, 68, 0.35);
+    border-color: #ff4444;
+    color: #fff;
+}
+
+.chart-alert-nav-pos {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 170, 170, 0.55);
+    letter-spacing: 1px;
+    flex: 1;
+    text-align: center;
+}
 
 #endgame-restart {
     background: var(--primary);
