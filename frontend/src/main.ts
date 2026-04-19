@@ -4,7 +4,7 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { createAssetRegistry, type AssetRegistry, type CoralConfig } from './assets';
+import { createAssetRegistry, setupInteractivePreview, type AssetRegistry, type CoralConfig } from './assets';
 import * as TWEEN from '@tweenjs/tween.js';
 
 // --- Interfaces ---
@@ -89,6 +89,8 @@ const pauseIndicator = document.getElementById('pause-indicator')!;
 
 // System State
 let isPaused = false;
+let previewDispose: (() => void) | null = null;
+let bingoPreviewDisposes: (() => void)[] = [];
 let isInternalUnlock = false; // Flag to skip next unlock event
 let prevTime = performance.now();
 let lastUIActionTime = 0; // Cooldown for UI toggles
@@ -125,6 +127,7 @@ headlight.intensity = 100;
 beamMaterial.uniforms.opacity.value = 0.4;
 
 function closeFishPopup() {
+    if (previewDispose) { previewDispose(); previewDispose = null; }
     fishPopup.style.display = 'none';
     isPaused = false;
     pauseIndicator.style.display = 'none';
@@ -135,7 +138,16 @@ function showPopup(id: string, title: string, desc: string) {
     lastUIActionTime = performance.now();
     fishNameEl.innerText = title;
     fishDescEl.innerText = desc;
-    fishPopup.style.display = 'block';
+    fishPopup.style.display = 'block'; // must be visible before renderer reads canvas size
+    if (previewDispose) { previewDispose(); previewDispose = null; }
+    const previewCanvas = document.getElementById('popup-species-canvas') as HTMLCanvasElement;
+    const fishCfg = fishConfigs.find(f => f.id === id);
+    const coralCfg = coralMetadata.find(c => c.id === id);
+    if (fishCfg) {
+        previewDispose = setupInteractivePreview(previewCanvas, 'fish', fishCfg);
+    } else if (coralCfg) {
+        previewDispose = setupInteractivePreview(previewCanvas, 'coral', { id: coralCfg.id, color: coralCfg.color });
+    }
     isPaused = true;
     pauseIndicator.style.display = 'flex';
     isInternalUnlock = true;
@@ -146,12 +158,59 @@ function showPopup(id: string, title: string, desc: string) {
     }
 }
 
+function renderBingoBook() {
+    bingoPreviewDisposes.forEach(d => d());
+    bingoPreviewDisposes = [];
+    bingoGridEl.innerHTML = '';
+    const categories = [
+        { title: 'Vertebrate Marine Life', species: fishConfigs.map((f: any) => ({ id: f.id, name: f.name || f.id })) },
+        { title: 'Coral Reef Structures', species: coralMetadata.map((c: any) => ({ id: c.id, name: c.name || c.id })) }
+    ];
+    categories.forEach(category => {
+        const header = document.createElement('div');
+        header.className = 'bingo-category-header';
+        header.innerText = category.title;
+        bingoGridEl.appendChild(header);
+        category.species.forEach(species => {
+            const isDiscovered = discoveredSpecies.has(species.id);
+            const slot = document.createElement('div');
+            slot.className = `bingo-slot ${isDiscovered ? 'discovered' : ''}`;
+            const icon = document.createElement('div');
+            icon.className = 'bingo-icon';
+            if (isDiscovered) {
+                const cfg = fishConfigs.find((f: any) => f.id === species.id) || coralMetadata.find((c: any) => c.id === species.id);
+                const type = fishConfigs.find((f: any) => f.id === species.id) ? 'fish' : 'coral';
+                if (cfg) {
+                    const previewCanvas = document.createElement('canvas');
+                    previewCanvas.width = 100;
+                    previewCanvas.height = 100;
+                    previewCanvas.className = 'bingo-preview-canvas';
+                    icon.appendChild(previewCanvas);
+                    bingoPreviewDisposes.push(setupInteractivePreview(previewCanvas, type, { id: cfg.id, color: cfg.color }));
+                } else {
+                    icon.innerText = '✓';
+                }
+            } else {
+                icon.innerText = '?';
+            }
+            const label = document.createElement('div');
+            label.className = 'bingo-label';
+            label.innerText = species.name;
+            slot.appendChild(icon);
+            slot.appendChild(label);
+            bingoGridEl.appendChild(slot);
+        });
+    });
+}
+
 function toggleBingoBook() {
     if (performance.now() - lastUIActionTime < UI_COOLDOWN) return;
     lastUIActionTime = performance.now();
 
     const isVisible = bingoBookEl.style.display === 'block';
     if (isVisible) {
+        bingoPreviewDisposes.forEach(d => d());
+        bingoPreviewDisposes = [];
         bingoBookEl.style.display = 'none';
         bingoOverlay.style.display = 'none';
         isPaused = false;
@@ -166,34 +225,6 @@ function toggleBingoBook() {
         isInternalUnlock = true;
         controls.unlock();
     }
-}
-
-function renderBingoBook() {
-    bingoGridEl.innerHTML = '';
-    const categories = [
-        { title: 'Vertebrate Marine Life', species: fishConfigs.map(f => ({ id: f.id, name: f.name || f.id })) },
-        { title: 'Coral Reef Structures', species: coralMetadata.map(c => ({ id: c.id, name: c.name || c.id })) }
-    ];
-    categories.forEach(category => {
-        const header = document.createElement('div');
-        header.className = 'bingo-category-header';
-        header.innerText = category.title;
-        bingoGridEl.appendChild(header);
-        category.species.forEach(species => {
-            const isDiscovered = discoveredSpecies.has(species.id);
-            const slot = document.createElement('div');
-            slot.className = `bingo-slot ${isDiscovered ? 'discovered' : ''}`;
-            const icon = document.createElement('div');
-            icon.className = 'bingo-icon';
-            icon.innerText = isDiscovered ? '✓' : '?';
-            const label = document.createElement('div');
-            label.className = 'bingo-label';
-            label.innerText = species.name;
-            slot.appendChild(icon);
-            slot.appendChild(label);
-            bingoGridEl.appendChild(slot);
-        });
-    });
 }
 
 const dyingColor = new THREE.Color(0x445566), tempColor = new THREE.Color();
@@ -245,7 +276,7 @@ function updateYear(year: number) {
         assets.coralsGroup.children.forEach(speciesMesh => {
             const data = speciesMesh.userData;
             if (data.type === 'coral') {
-                const isBleached = year >= data.bleach_year;
+                const isBleached = data.bleach_year !== null && year >= data.bleach_year;
                 const targetColor = isBleached ? greyColor : data.originalColor;
                 const mat = (speciesMesh as THREE.Mesh).material as THREE.MeshStandardMaterial;
                 mat.color.copy(targetColor);
@@ -352,10 +383,10 @@ window.addEventListener('mousemove', (event) => {
 });
 
 window.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return; 
+    if (event.button !== 0) return;
     if (bingoBookEl.style.display === 'block') return;
-    if (fishPopup.style.display === 'block') return; // Prevent clicking through popup
-    if (!controls.isLocked && !isPaused) return; 
+    if (fishPopup.style.display === 'block') return;
+    if (!controls.isLocked) return; 
 
     raycaster.setFromCamera(mouse, camera);
     const fishIntersects = raycaster.intersectObject(assets.fishHitboxMesh);
@@ -393,7 +424,7 @@ window.addEventListener('pointerdown', (event) => {
 
     if (targetId !== -1) {
         const config = fishConfigs.find(c => c.id === targetSpecies);
-        if (config) showPopup(config.id, targetSpecies.toUpperCase(), config.desc || `Scan complete.`);
+        if (config) showPopup(config.id, (config.name || targetSpecies).toUpperCase(), config.desc || '');
     }
 });
 
