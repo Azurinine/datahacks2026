@@ -13,7 +13,7 @@ const scene = new THREE.Scene();
 const waterSurfaceColor = new THREE.Color(0x0088dd); // Lighter bluer surface
 const waterDeepColor = new THREE.Color(0x00aaaa);    // Brighter deeper hue
 scene.background = new THREE.Color(0x000000); 
-scene.fog = new THREE.FogExp2(waterSurfaceColor, 0.02);
+scene.fog = new THREE.FogExp2(waterSurfaceColor, 0.012);
 
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
 camera.position.set(0, 5, 10);
@@ -119,13 +119,15 @@ function updateBrightness(val: number) {
 brightnessSlider.addEventListener('input', (e) => updateBrightness(parseFloat((e.target as HTMLInputElement).value)));
 
 // Floor
-const floorGeometry = new THREE.PlaneGeometry(300, 300, 64, 64);
+const floorGeometry = new THREE.PlaneGeometry(120, 160, 64, 80);
 floorGeometry.rotateX(-Math.PI / 2);
 const posAttr = floorGeometry.attributes.position;
 for (let i = 0; i < posAttr.count; i++) {
     const x = posAttr.getX(i), z = posAttr.getZ(i);
-    const y = Math.sin(x * 0.05) * 3 + Math.cos(z * 0.05) * 3 - 5; 
-    posAttr.setY(i, y);
+    const twist = Math.sin(z * 0.08) * 6;
+    const baseHeight = Math.sin(x * 0.05) * 2 + Math.cos(z * 0.05) * 2 - 5; 
+    const wallHeight = Math.pow(Math.abs(x + twist) / 10, 4); 
+    posAttr.setY(i, baseHeight + Math.min(wallHeight, 12)); // Shorter walls capped at 12
 }
 floorGeometry.computeVertexNormals();
 const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xc2b280, roughness: 1.0 }); // Sandy floor
@@ -135,7 +137,7 @@ scene.add(floor);
 // Assets
 const FISH_COUNT = 800;
 const assets: AssetRegistry = createAssetRegistry(FISH_COUNT);
-scene.add(assets.fishMesh); scene.add(assets.coralsGroup); scene.add(assets.sunRaysGroup); scene.add(assets.geographyGroup); scene.add(assets.environmentGroup);
+scene.add(assets.fishMesh); scene.add(assets.coralsGroup); scene.add(assets.sunRaysGroup); scene.add(assets.geographyGroup); scene.add(assets.environmentGroup); scene.add(assets.seaweedsGroup);
 const dyingColor = new THREE.Color(0x445566), tempColor = new THREE.Color();
 function updateFish(vitality: number) {
     if (assets.fishMesh.instanceColor) {
@@ -199,13 +201,15 @@ function animate() {
         for (const rock of assets.rockSpheres) {
             if (playerPos.distanceTo(rock.center) < rock.radius + 1.5) { playerPos.copy(oldPos); velocity.set(0,0,0); break; }
         }
-        const floorY = Math.sin(playerPos.x * 0.05) * 3 + Math.cos(playerPos.z * 0.05) * 3 - 5;
+        const twist = Math.sin(playerPos.z * 0.08) * 6;
+        const baseFloorY = Math.sin(playerPos.x * 0.05) * 2 + Math.cos(playerPos.z * 0.05) * 2 - 5;
+        const wallHeight = Math.pow(Math.abs(playerPos.x + twist) / 10, 4);
+        const floorY = baseFloorY + Math.min(wallHeight, 12);
+        
         if (playerPos.y < floorY + 2) { playerPos.y = floorY + 2; velocity.y = 0; }
-        if (playerPos.y > 34) { playerPos.y = 34; velocity.y = 0; }
-        if (Math.sqrt(playerPos.x*playerPos.x + playerPos.z*playerPos.z) > 60) {
-            const angle = Math.atan2(playerPos.z, playerPos.x);
-            playerPos.x = Math.cos(angle)*60; playerPos.z = Math.sin(angle)*60;
-        }
+        if (playerPos.y > 15) { playerPos.y = 15; velocity.y = 0; } // Lower max height
+        if (Math.abs(playerPos.x) > 40) { playerPos.x = Math.sign(playerPos.x) * 40; }
+        if (Math.abs(playerPos.z) > 70) { playerPos.z = Math.sign(playerPos.z) * 70; }
     }
 
     // Sun rays get darker as they go down (depthLerp=1 at bottom)
@@ -213,10 +217,10 @@ function animate() {
 
     if (!isPaused) {
         const schoolPositions = [
-            new THREE.Vector3(Math.sin(time*0.0005)*25, 12, Math.cos(time*0.0005)*25),
-            new THREE.Vector3(Math.cos(time*0.0004)*20, 8, Math.sin(time*0.0004)*20),
-            new THREE.Vector3(Math.sin(time*0.0006)*30, 15, Math.cos(time*0.0003)*30),
-            new THREE.Vector3(Math.cos(time*0.00055)*22, 10, Math.sin(time*0.00065)*22)
+            new THREE.Vector3(Math.sin(time*0.0005)*15, 12, Math.cos(time*0.0003)*80),
+            new THREE.Vector3(Math.cos(time*0.0004)*10, 25, Math.sin(time*0.0002)*70),
+            new THREE.Vector3(Math.sin(time*0.0006)*20, 18, Math.cos(time*0.0004)*90),
+            new THREE.Vector3(Math.cos(time*0.00055)*12, 5, Math.sin(time*0.00035)*85)
         ];
         const playerPos = camera.position;
         for (let i = 0; i < FISH_COUNT; i++) {

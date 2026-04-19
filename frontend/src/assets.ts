@@ -17,6 +17,8 @@ export interface AssetRegistry {
     fishMaterial: THREE.MeshStandardMaterial;
     coralMaterial: THREE.MeshStandardMaterial;
     rockMaterial: THREE.MeshStandardMaterial;
+    seaweedsGroup: THREE.Group;
+    seaweedMaterial: THREE.MeshStandardMaterial;
     sunRaysGroup: THREE.Group;
     sunRayMaterial: THREE.MeshBasicMaterial;
 }
@@ -35,14 +37,14 @@ export function createAssetRegistry(fishCount: number): AssetRegistry {
     const fishData: AssetRegistry['fishData'] = [];
     const numSchools = fishPalettes.length;
     const schoolCenters = fishPalettes.map(() => ({
-        pos: new THREE.Vector3((Math.random()-0.5)*40, Math.random()*15+5, (Math.random()-0.5)*40),
+        pos: new THREE.Vector3((Math.random()-0.5)*20, Math.random()*8+2, (Math.random()-0.5)*100),
     }));
 
     for (let i = 0; i < fishCount; i++) {
         const schoolId = i % numSchools;
         instColor.setHex(fishPalettes[schoolId]).toArray(colorArray, i * 3);
         const center = schoolCenters[schoolId].pos;
-        const offset = new THREE.Vector3((Math.random()-0.5)*15, (Math.random()-0.5)*6, (Math.random()-0.5)*15);
+        const offset = new THREE.Vector3((Math.random()-0.5)*10, (Math.random()-0.5)*4, (Math.random()-0.5)*10);
         dummy.position.copy(center).add(offset);
         dummy.updateMatrix();
         fishMesh.setMatrixAt(i, dummy.matrix);
@@ -56,30 +58,40 @@ export function createAssetRegistry(fishCount: number): AssetRegistry {
 
     // --- Environment ---
     const environmentGroup = new THREE.Group();
-    const domeGeo = new THREE.SphereGeometry(65, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+    const domeGeo = new THREE.SphereGeometry(100, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeMat = new THREE.MeshBasicMaterial({ color: 0x000205, side: THREE.BackSide, fog: false });
     const dome = new THREE.Mesh(domeGeo, domeMat);
     dome.position.y = -5;
     environmentGroup.add(dome);
 
-    const ceilingGeo = new THREE.CircleGeometry(65, 32);
+    const ceilingGeo = new THREE.PlaneGeometry(200, 200);
     const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x0088dd, transparent: true, opacity: 0.6, side: THREE.DoubleSide, roughness: 0.1, metalness: 0.8 });
     const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
     ceiling.rotation.x = Math.PI / 2;
-    ceiling.position.y = 35; 
+    ceiling.position.y = 16; 
     environmentGroup.add(ceiling);
 
     // --- Geography ---
     const geographyGroup = new THREE.Group();
     const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x3a4b4c, roughness: 1.0, flatShading: true });
     const rockSpheres: { center: THREE.Vector3, radius: number }[] = [];
-    for (let i = 0; i < 120; i++) {
-        const size = Math.random() * 6 + 2;
+    for (let i = 0; i < 250; i++) {
+        const size = Math.random() * 5 + 2;
+        const x = (Math.random() - 0.5) * 80;
+        const z = (Math.random() - 0.5) * 150;
+        
+        // Skip large rocks in the central path
+        if (Math.abs(x) < 5 && size > 3) continue;
+
         const geo = new THREE.IcosahedronGeometry(size, 1);
         const rock = new THREE.Mesh(geo, rockMaterial);
-        const angle = Math.random() * Math.PI * 2, dist = Math.random() * 60;
-        const x = Math.cos(angle)*dist, z = Math.sin(angle)*dist, y = Math.sin(x*0.05)*3+Math.cos(z*0.05)*3-5;
-        rock.position.set(x, y - size * 0.3, z);
+        const twist = Math.sin(z * 0.08) * 6;
+        const baseHeight = Math.sin(x * 0.05) * 2 + Math.cos(z * 0.05) * 2 - 5;
+        const wallHeight = Math.pow(Math.abs(x + twist) / 10, 4);
+        const y = baseHeight + Math.min(wallHeight, 12);
+        
+        rock.position.set(x, y - size * 0.2, z);
+        rock.scale.set(1, 1.8 + Math.random() * 1.5, 1); // Taller rocks
         rock.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
         geographyGroup.add(rock);
         rockSpheres.push({ center: rock.position.clone(), radius: size * 0.85 });
@@ -90,8 +102,15 @@ export function createAssetRegistry(fishCount: number): AssetRegistry {
     const coralMaterial = new THREE.MeshStandardMaterial({ color: 0xff6b81, flatShading: true });
     for(let i = 0; i < 1500; i++) {
         const cluster = new THREE.Group();
-        const angle = Math.random()*Math.PI*2, dist = Math.random()*62;
-        const sx = Math.cos(angle)*dist, sz = Math.sin(angle)*dist, sy = Math.sin(sx*0.05)*3+Math.cos(sz*0.05)*3-5+0.2;
+        const sx = (Math.random() - 0.5) * 80;
+        const sz = (Math.random() - 0.5) * 150;
+        const twist = Math.sin(sz * 0.08) * 6;
+        if (Math.abs(sx + twist) > 40) continue; // Out of bounds
+
+        const baseHeight = Math.sin(sx * 0.05) * 2 + Math.cos(sz * 0.05) * 2 - 5;
+        const wallHeight = Math.pow(Math.abs(sx + twist) / 10, 4);
+        const sy = baseHeight + Math.min(wallHeight, 12) + 0.2;
+        
         cluster.position.set(sx, sy, sz);
         const numPieces = Math.floor(Math.random()*4)+2;
         const clusterColor = new THREE.Color().setHSL(Math.random()*0.12+0.92, 0.8, 0.5); 
@@ -107,7 +126,34 @@ export function createAssetRegistry(fishCount: number): AssetRegistry {
         coralsGroup.add(cluster);
     }
 
-    // --- Dispersed Sun Rays (Spawn high above, wider at bottom) ---
+    // --- Seaweed ---
+    const seaweedsGroup = new THREE.Group();
+    const seaweedMaterial = new THREE.MeshStandardMaterial({ color: 0x2d5a27, side: THREE.DoubleSide, flatShading: true });
+    for (let i = 0; i < 400; i++) {
+        const x = (Math.random() - 0.5) * 80;
+        const z = (Math.random() - 0.5) * 150;
+        const twist = Math.sin(z * 0.08) * 6;
+        const baseHeight = Math.sin(x * 0.05) * 2 + Math.cos(z * 0.05) * 2 - 5;
+        const wallHeight = Math.pow(Math.abs(x + twist) / 10, 4);
+        const y = baseHeight + Math.min(wallHeight, 12) + 0.1;
+
+        const height = Math.random() * 2 + 1;
+        const seaweedGeo = new THREE.PlaneGeometry(0.2, height, 1, 4);
+        // Bend it slightly
+        const pos = seaweedGeo.attributes.position;
+        for(let j=0; j<pos.count; j++) {
+            const py = pos.getY(j);
+            pos.setX(j, pos.getX(j) + Math.sin(py * 2) * 0.2);
+        }
+        seaweedGeo.computeVertexNormals();
+
+        const seaweed = new THREE.Mesh(seaweedGeo, seaweedMaterial);
+        seaweed.position.set(x, y + height / 2, z);
+        seaweed.rotation.y = Math.random() * Math.PI;
+        seaweedsGroup.add(seaweed);
+    }
+
+    // --- Dispersed Sun Rays ---
     const sunRaysGroup = new THREE.Group();
     const sunRayMaterial = new THREE.MeshBasicMaterial({
         color: 0xeeffff, transparent: true, opacity: 0.03, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
@@ -130,6 +176,7 @@ export function createAssetRegistry(fishCount: number): AssetRegistry {
 
     return {
         fishMesh, coralsGroup, geographyGroup, environmentGroup, fishData, rockSpheres,
-        fishMaterial, coralMaterial, rockMaterial, sunRaysGroup, sunRayMaterial
+        fishMaterial, coralMaterial, rockMaterial, seaweedsGroup, seaweedMaterial,
+        sunRaysGroup, sunRayMaterial
     };
 }
