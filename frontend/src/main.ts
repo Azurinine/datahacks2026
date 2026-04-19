@@ -78,7 +78,6 @@ const controls = new PointerLockControls(camera, document.body);
 const instructions = document.getElementById('instructions')!;
 const yearSlider = document.getElementById('year-slider') as HTMLInputElement;
 const yearValue = document.getElementById('year-value')!;
-const brightnessSlider = document.getElementById('brightness-slider') as HTMLInputElement;
 const fishPopup = document.getElementById('fish-popup')!;
 const fishNameEl = document.getElementById('fish-name')!;
 const fishDescEl = document.getElementById('fish-desc')!;
@@ -90,8 +89,6 @@ const pauseIndicator = document.getElementById('pause-indicator')!;
 
 // System State
 let isPaused = false;
-let headlightOn = true;
-let blurEnabled = true;
 let isInternalUnlock = false; // Flag to skip next unlock event
 let prevTime = performance.now();
 let lastUIActionTime = 0; // Cooldown for UI toggles
@@ -124,11 +121,8 @@ const mouse = new THREE.Vector2();
 // 2. HELPER FUNCTIONS
 // ==========================================
 
-function updateBrightness(val: number) {
-    brightnessSlider.value = val.toFixed(1);
-    headlight.intensity = val * 100; 
-    beamMaterial.uniforms.opacity.value = (val / 3) * 0.4;
-}
+headlight.intensity = 100;
+beamMaterial.uniforms.opacity.value = 0.4;
 
 function closeFishPopup() {
     fishPopup.style.display = 'none';
@@ -323,8 +317,6 @@ document.addEventListener('keydown', (event) => {
         case 'Space': moveState.up = true; break;
         case 'ShiftLeft':
         case 'ShiftRight': moveState.down = true; break;
-        case 'KeyF': headlightOn = !headlightOn; headlight.visible = headlightOn; headlightBeam.visible = headlightOn; break;
-        case 'KeyB': blurEnabled = !blurEnabled; blurPass.enabled = blurEnabled; break;
         case 'KeyP': isPaused = !isPaused; pauseIndicator.style.display = isPaused ? 'flex' : 'none'; break;
     }
     const curYear = parseInt(yearSlider.value);
@@ -344,8 +336,6 @@ document.addEventListener('keyup', (event) => {
     }
 });
 
-brightnessSlider.addEventListener('input', (e) => updateBrightness(parseFloat((e.target as HTMLInputElement).value)));
-brightnessSlider.addEventListener('click', (e) => e.stopPropagation());
 yearSlider.addEventListener('click', (e) => e.stopPropagation());
 yearSlider.addEventListener('input', (e) => updateYear(parseInt((e.target as HTMLInputElement).value)));
 popupClose.addEventListener('click', (e) => { e.stopPropagation(); closeFishPopup(); });

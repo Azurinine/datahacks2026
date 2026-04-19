@@ -24,6 +24,9 @@
         <div class="control-key"><kbd>MOUSE</kbd>LOOK</div>
         <div class="control-key"><kbd>TAB</kbd>BINGO BOOK</div>
         <div class="control-key"><kbd>CLICK</kbd>SCAN</div>
+        <div class="control-key"><kbd>P</kbd>FREEZE</div>
+        <div class="control-key"><kbd>M</kbd>MENU</div>
+        <div class="control-key"><kbd>[ ]</kbd>YEAR</div>
       </div>
       <p class="click-to-start">[ CLICK ANYWHERE TO START ]</p>
     </div>
@@ -47,25 +50,17 @@
         <div class="stat-row"><span class="stat-label">ECO VITALITY</span> <span id="stat-vit" class="stat-value highlight">--</span></div>
       </div>
 
-      <!-- Top Right: System Options -->
+      <!-- Top Right: Timeline Controls -->
       <div id="panel-settings" class="hud-panel">
-        <div class="panel-header">SYSTEM RIG</div>
-        <div class="setting-row">
-          <label for="brightness-slider" class="stat-label">HEADLIGHT <kbd>F</kbd></label>
-          <input type="range" id="brightness-slider" min="0" max="3" step="0.1" value="1.2">
-        </div>
-        <div class="setting-row menu-hint">
-          <span class="stat-label">PRESS <kbd>M</kbd> FOR MENU</span>
-        </div>
-      </div>
-
-      <!-- Bottom Center: Time Controls -->
-      <div id="panel-time" class="hud-panel">
-        <div id="year-display">SIMULATION YEAR // <span id="year-value" class="highlight">2014</span></div>
+        <div class="panel-header">TEMPORAL RIG</div>
+        <div id="year-display">YEAR // <span id="year-value" class="highlight">2014</span></div>
         <div id="slider-wrapper">
             <input type="range" id="year-slider" min="2014" max="2026" step="1" value="2014">
         </div>
         <div class="time-hint">PRESS <kbd>[</kbd> OR <kbd>]</kbd> TO STEP</div>
+        <div class="setting-row menu-hint">
+          <span class="stat-label">PRESS <kbd>M</kbd> FOR MENU</span>
+        </div>
       </div>
 
     </div>
