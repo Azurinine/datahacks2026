@@ -249,11 +249,18 @@ body {
     align-items: center;
 }
 
-#panel-stats {
+#left-column {
     position: absolute;
     top: 40px;
     left: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     width: 320px;
+}
+
+#panel-stats {
+    width: 100%;
 }
 
 .stat-row {
@@ -316,9 +323,6 @@ body {
 
 /* Bingo Book Floating Trigger (Moved to bottom left above chat) */
 #bingo-trigger {
-    position: absolute;
-    bottom: 420px; /* Above the scaled chat */
-    left: 40px;
     display: flex;
     align-items: center;
     gap: 15px;
