@@ -1,0 +1,50 @@
+[
+  {
+    "id": "desmophyllum",
+    "name": "Desmophyllum",
+    "color": "#21ac6f",
+    "bleach_year": 2016,
+    "proportion": 0.103,
+    "desc": ""
+  },
+  {
+    "id": "caryophyllia",
+    "name": "Caryophyllia",
+    "color": "#ea77b7",
+    "bleach_year": null,
+    "proportion": 0.0242,
+    "desc": ""
+  },
+  {
+    "id": "polymyces_montereyensis",
+    "name": "Polymyces montereyensis",
+    "color": "#f1c5ec",
+    "bleach_year": 2023,
+    "proportion": 0.0384,
+    "desc": ""
+  },
+  {
+    "id": "adelogorgia_phyllosclera",
+    "name": "Adelogorgia phyllosclera",
+    "color": "#fd4482",
+    "bleach_year": 2021,
+    "proportion": 0.3269,
+    "desc": ""
+  },
+  {
+    "id": "eugorgia_rubens",
+    "name": "Eugorgia rubens",
+    "color": "#5c2f46",
+    "bleach_year": null,
+    "proportion": 0.2878,
+    "desc": ""
+  },
+  {
+    "id": "antipathes_dendrochristos",
+    "name": "Antipathes dendrochristos",
+    "color": "#27f81d",
+    "bleach_year": 2021,
+    "proportion": 0.2197,
+    "desc": ""
+  }
+]
