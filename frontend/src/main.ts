@@ -92,8 +92,11 @@ const pauseIndicator = document.getElementById('pause-indicator')!;
 let isPaused = false;
 let headlightOn = true;
 let blurEnabled = true;
-let isMenuMode = false;
+let isInternalUnlock = false; // Flag to skip next unlock event
 let prevTime = performance.now();
+let lastUIActionTime = 0; // Cooldown for UI toggles
+const UI_COOLDOWN = 300; 
+
 const moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false };
 const velocity = new THREE.Vector3();
 const direction = new THREE.Vector3();
@@ -131,15 +134,17 @@ function closeFishPopup() {
     fishPopup.style.display = 'none';
     isPaused = false;
     pauseIndicator.style.display = 'none';
-    controls.lock();
+    instructions.style.opacity = '1'; // Show 'Click to Resume' instructions
 }
 
 function showPopup(id: string, title: string, desc: string) {
+    lastUIActionTime = performance.now();
     fishNameEl.innerText = title;
     fishDescEl.innerText = desc;
     fishPopup.style.display = 'block';
     isPaused = true;
     pauseIndicator.style.display = 'flex';
+    isInternalUnlock = true;
     controls.unlock();
     if (!discoveredSpecies.has(id)) {
         discoveredSpecies.add(id);
@@ -148,19 +153,23 @@ function showPopup(id: string, title: string, desc: string) {
 }
 
 function toggleBingoBook() {
+    if (performance.now() - lastUIActionTime < UI_COOLDOWN) return;
+    lastUIActionTime = performance.now();
+
     const isVisible = bingoBookEl.style.display === 'block';
     if (isVisible) {
         bingoBookEl.style.display = 'none';
         bingoOverlay.style.display = 'none';
         isPaused = false;
         pauseIndicator.style.display = 'none';
-        controls.lock();
+        instructions.style.opacity = '1'; // Show 'Click to Resume'
     } else {
         renderBingoBook();
         bingoBookEl.style.display = 'block';
         bingoOverlay.style.display = 'block';
         isPaused = true;
         pauseIndicator.style.display = 'flex';
+        isInternalUnlock = true;
         controls.unlock();
     }
 }
@@ -258,10 +267,31 @@ function updateYear(year: number) {
 instructions.addEventListener('click', () => controls.lock());
 controls.addEventListener('lock', () => {
     instructions.style.opacity = '0';
-    isMenuMode = false;
 });
 controls.addEventListener('unlock', () => {
-    if (isMenuMode) instructions.style.opacity = '1';
+    if (isInternalUnlock) {
+        isInternalUnlock = false;
+        return;
+    }
+
+    // 1. If a submenu was open, just hide it (user pressed Esc to leave)
+    if (fishPopup.style.display === 'block') {
+        fishPopup.style.display = 'none';
+        isPaused = false;
+        pauseIndicator.style.display = 'none';
+        return; // Don't show main menu
+    }
+    
+    if (bingoBookEl.style.display === 'block') {
+        bingoBookEl.style.display = 'none';
+        bingoOverlay.style.display = 'none';
+        isPaused = false;
+        pauseIndicator.style.display = 'none';
+        return; // Don't show main menu
+    }
+
+    // 2. If NO submenu is open, show the main instructions menu
+    instructions.style.opacity = '1';
 });
 
 document.addEventListener('keydown', (event) => {
@@ -270,19 +300,13 @@ document.addEventListener('keydown', (event) => {
         toggleBingoBook();
         return;
     }
-    if (event.code === 'Escape') {
-        if (fishPopup.style.display === 'block' || bingoBookEl.style.display === 'block') {
-            event.preventDefault();
-            event.stopPropagation();
-            if (fishPopup.style.display === 'block') closeFishPopup();
-            else if (bingoBookEl.style.display === 'block') toggleBingoBook();
-            return;
-        }
-    }
+    // Remove manual Escape handling entirely - rely on 'unlock' listener
+    
     switch (event.code) {
-        case 'KeyM':
-            if (controls.isLocked) { isMenuMode = true; controls.unlock(); }
+        case 'KeyM': // Keep M as an alternative
+            if (controls.isLocked) { controls.unlock(); }
             break;
+
         case 'KeyW': moveState.forward = true; break;
         case 'KeyA': moveState.left = true; break;
         case 'KeyS': moveState.backward = true; break;
