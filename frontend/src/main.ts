@@ -1564,7 +1564,8 @@ async function init() {
     warnings = warningsData;
     fishConfigs = fishMeta.map((f: any) => ({
         ...f,
-        color: parseInt(f.color.replace('#', '0x'))
+        color: parseInt(f.color.replace('#', '0x')),
+        scale: (f.scale ?? 1) * 1.5
     }));
 
     FISH_COUNT = fishConfigs.reduce((s, c) => s + c.count, 0);

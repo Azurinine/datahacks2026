@@ -52,7 +52,8 @@ export function createAssetRegistry(fishConfigs: FishConfig[], coralConfigs: Cor
     // --- Fish System ---
     const fishGeometry = new THREE.ConeGeometry(0.15, 0.8, 4);
     fishGeometry.rotateX(Math.PI / 2); 
-    const fishMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+    const fishMaterial = new       
+        THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 }); 
     const fishMesh = new THREE.InstancedMesh(fishGeometry, fishMaterial, totalFishCount);
     fishMesh.frustumCulled = false;
     
