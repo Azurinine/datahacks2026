@@ -4,13 +4,23 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { createAssetRegistry, setupInteractivePreview, type AssetRegistry, type CoralConfig } from './assets';
+import { createAssetRegistry, setupInteractivePreview, generateThumbnail, warmThumbnailCache, type AssetRegistry, type CoralConfig } from './assets';
 import * as TWEEN from '@tweenjs/tween.js';
+import Chart from 'chart.js/auto';
 
 // --- Interfaces ---
 interface PopulationYear {
     year: number;
     counts: { [species: string]: number };
+}
+
+interface Discovery {
+    id: string;
+    name: string;
+    year: number;
+    count: number;
+    x: number;
+    z: number;
 }
 
 // ==========================================
@@ -86,9 +96,15 @@ const bingoBookEl = document.getElementById('bingo-book')!;
 const bingoGridEl = document.getElementById('bingo-grid')!;
 const bingoOverlay = document.getElementById('bingo-overlay')!;
 const pauseIndicator = document.getElementById('pause-indicator')!;
+const chatContainer = document.getElementById('chat-container')!;
+const endgameStatsEl = document.getElementById('endgame-stats')!;
+const endgameOverlay = document.getElementById('endgame-overlay')!;
+const discoveryMapEl = document.getElementById('discovery-map')!;
+const discoveryListEl = document.getElementById('discovery-list')!;
 
 // System State
 let isPaused = false;
+let gameEnded = false;
 let previewDispose: (() => void) | null = null;
 let bingoPreviewDisposes: (() => void)[] = [];
 let isInternalUnlock = false; // Flag to skip next unlock event
@@ -96,14 +112,25 @@ let prevTime = performance.now();
 let lastUIActionTime = 0; // Cooldown for UI toggles
 const UI_COOLDOWN = 300; 
 
-const moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false };
+// Narrative State
+let currentYear = 2014;
+let timeInYear = 0;
+const YEAR_DURATION = 15; // 15 seconds per year for faster progression
+let warnings: { year: number, message: string }[] = [];
+const warningBanner = document.getElementById('warning-banner')!;
+const warningText = document.getElementById('warning-text')!;
+const yearProgressFill = document.getElementById('year-progress-fill')!;
+
+const moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false, fastForward: false };
 const velocity = new THREE.Vector3();
 const direction = new THREE.Vector3();
 
 // Data State
 let populations: PopulationYear[] = [];
 let coralMetadata: any[] = [];
-let discoveredSpecies = new Set<string>(JSON.parse(localStorage.getItem('discoveredSpecies') || '[]'));
+let discoveryLog: Discovery[] = JSON.parse(localStorage.getItem('discoveryLog') || '[]');
+let discoveredSpecies = new Set<string>(discoveryLog.map(d => d.id));
+let needsBingoRender = true;
 let fishConfigs: any[] = [];
 let FISH_COUNT = 0;
 const speciesOffset: { [id: string]: number } = {};
@@ -141,31 +168,64 @@ function showPopup(id: string, title: string, desc: string) {
     fishPopup.style.display = 'block'; // must be visible before renderer reads canvas size
     if (previewDispose) { previewDispose(); previewDispose = null; }
     const previewCanvas = document.getElementById('popup-species-canvas') as HTMLCanvasElement;
-    const fishCfg = fishConfigs.find(f => f.id === id);
+    
+    // Check coral first to use coral geometry
     const coralCfg = coralMetadata.find(c => c.id === id);
-    if (fishCfg) {
-        previewDispose = setupInteractivePreview(previewCanvas, 'fish', fishCfg);
-    } else if (coralCfg) {
+    const fishCfg = fishConfigs.find(f => f.id === id);
+    
+    if (coralCfg) {
         previewDispose = setupInteractivePreview(previewCanvas, 'coral', { id: coralCfg.id, color: coralCfg.color });
+    } else if (fishCfg) {
+        previewDispose = setupInteractivePreview(previewCanvas, 'fish', fishCfg);
     }
+
     isPaused = true;
     pauseIndicator.style.display = 'flex';
     isInternalUnlock = true;
+    
+    // Clear move state when opening menu
+    Object.keys(moveState).forEach(k => (moveState as any)[k] = false);
     controls.unlock();
+    
     if (!discoveredSpecies.has(id)) {
         discoveredSpecies.add(id);
-        localStorage.setItem('discoveredSpecies', JSON.stringify(Array.from(discoveredSpecies)));
+        
+        // Find population count for this species in current year
+        const currentYearData = populations.find(p => p.year === currentYear);
+        const speciesCount = currentYearData ? (currentYearData.counts[id] || 0) : 0;
+        
+        discoveryLog.push({
+            id,
+            name: title,
+            year: currentYear,
+            count: speciesCount,
+            x: camera.position.x,
+            z: camera.position.z
+        });
+        
+        localStorage.setItem('discoveryLog', JSON.stringify(discoveryLog));
+        needsBingoRender = true; // Mark for re-render
     }
 }
 
 function renderBingoBook() {
+    if (!needsBingoRender) return; // Optimization
+    needsBingoRender = false;
+
+    // Reset list
     bingoPreviewDisposes.forEach(d => d());
     bingoPreviewDisposes = [];
     bingoGridEl.innerHTML = '';
-    const categories = [
-        { title: 'Vertebrate Marine Life', species: fishConfigs.map((f: any) => ({ id: f.id, name: f.name || f.id })) },
-        { title: 'Coral Reef Structures', species: coralMetadata.map((c: any) => ({ id: c.id, name: c.name || c.id })) }
-    ];
+    
+    // Split species correctly between categories
+    const coralIds = new Set(coralMetadata.map(c => c.id));
+    const fishSpecies = fishConfigs.filter(f => !coralIds.has(f.id)).map((f: any) => ({ id: f.id, name: f.name || f.id }));
+    const coralSpecies = coralMetadata.map((c: any) => ({ id: c.id, name: c.name || c.id }));
+
+    const categories = [];
+    if (fishSpecies.length > 0) categories.push({ title: 'Vertebrate Marine Life', species: fishSpecies });
+    if (coralSpecies.length > 0) categories.push({ title: 'Coral Reef Structures', species: coralSpecies });
+
     categories.forEach(category => {
         const header = document.createElement('div');
         header.className = 'bingo-category-header';
@@ -178,15 +238,16 @@ function renderBingoBook() {
             const icon = document.createElement('div');
             icon.className = 'bingo-icon';
             if (isDiscovered) {
-                const cfg = fishConfigs.find((f: any) => f.id === species.id) || coralMetadata.find((c: any) => c.id === species.id);
-                const type = fishConfigs.find((f: any) => f.id === species.id) ? 'fish' : 'coral';
+                const coralCfg = coralMetadata.find((c: any) => c.id === species.id);
+                const fishCfg = fishConfigs.find((f: any) => f.id === species.id);
+                const cfg = coralCfg || fishCfg;
+                const type = coralCfg ? 'coral' : 'fish';
                 if (cfg) {
-                    const previewCanvas = document.createElement('canvas');
-                    previewCanvas.width = 100;
-                    previewCanvas.height = 100;
-                    previewCanvas.className = 'bingo-preview-canvas';
-                    icon.appendChild(previewCanvas);
-                    bingoPreviewDisposes.push(setupInteractivePreview(previewCanvas, type, { id: cfg.id, color: cfg.color }));
+                    const thumbUrl = generateThumbnail(type, { id: cfg.id, color: cfg.color });
+                    const img = document.createElement('img');
+                    img.src = thumbUrl;
+                    img.className = 'bingo-preview-img';
+                    icon.appendChild(img);
                 } else {
                     icon.innerText = '✓';
                 }
@@ -200,6 +261,82 @@ function renderBingoBook() {
             slot.appendChild(label);
             bingoGridEl.appendChild(slot);
         });
+    });
+}
+
+function showEndgameStats() {
+    if (gameEnded) return;
+    gameEnded = true;
+    isPaused = true;
+    controls.unlock();
+    
+    // Hide UI
+    document.getElementById('hud-container')!.style.display = 'none';
+    warningBanner.classList.remove('active');
+    
+    // Show stats
+    endgameOverlay.style.display = 'block';
+    endgameStatsEl.style.display = 'block';
+    
+    // 1. Population Chart
+    const years = populations.map(p => p.year);
+    const totalPopulations = populations.map(p => Object.values(p.counts).reduce((a, b) => a + b, 0));
+    
+    const ctx = (document.getElementById('population-chart') as HTMLCanvasElement).getContext('2d')!;
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: years,
+            datasets: [{
+                label: 'Total Marine Population',
+                data: totalPopulations,
+                borderColor: '#00e5ff',
+                backgroundColor: 'rgba(0, 229, 255, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#00e5ff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: false, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#88bbcc' } },
+                x: { grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#88bbcc' } }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+    
+    // 2. Discovery Sonar Map
+    discoveryMapEl.innerHTML = '';
+    discoveryLog.forEach(d => {
+        const marker = document.createElement('div');
+        marker.className = 'map-marker';
+        // Map Three.js coords (x: -40..40, z: -70..70) to map percentage
+        const left = ((d.x + 40) / 80) * 100;
+        const top = ((d.z + 70) / 140) * 100;
+        marker.style.left = `${left}%`;
+        marker.style.top = `${top}%`;
+        marker.title = `${d.name} (${d.year})`;
+        discoveryMapEl.appendChild(marker);
+    });
+    
+    // 3. Discovery List
+    discoveryListEl.innerHTML = '';
+    discoveryLog.forEach(d => {
+        const item = document.createElement('div');
+        item.className = 'discovery-item';
+        item.innerHTML = `
+            <div class="discovery-name">${d.name}</div>
+            <div class="discovery-info">
+                YEAR: ${d.year}<br>
+                POPULATION WHEN FOUND: ${d.count}
+            </div>
+        `;
+        discoveryListEl.appendChild(item);
     });
 }
 
@@ -223,6 +360,9 @@ function toggleBingoBook() {
         isPaused = true;
         pauseIndicator.style.display = 'flex';
         isInternalUnlock = true;
+        
+        // Reset move state when opening menu
+        Object.keys(moveState).forEach(k => (moveState as any)[k] = false);
         controls.unlock();
     }
 }
@@ -260,16 +400,71 @@ function applyDataToWorld(pH: number, temp: number) {
     document.getElementById('stat-temp')!.innerText = temp.toFixed(1) + " °C";
     document.getElementById('stat-vit')!.innerText = (vitality*100).toFixed(0) + "%";
     updateFish(vitality);
+    
+    // Intense visual effects as vitality drops
+    if (vitality < 0.3) {
+        blurPass.uniforms.strength.value = 0.15 + (0.3 - vitality) * 2;
+    } else {
+        blurPass.uniforms.strength.value = 0.15;
+    }
+}
+
+function addChatMessage(msg: string, type: 'info' | 'warning' | 'critical' = 'info') {
+    const el = document.createElement('div');
+    el.className = `chat-msg ${type}`;
+    el.innerText = `[${currentYear}] ${msg}`;
+    chatContainer.appendChild(el);
+    if (chatContainer.children.length > 8) chatContainer.removeChild(chatContainer.firstChild!);
+    
+    // Auto remove after 10 seconds
+    setTimeout(() => {
+        if (el.parentNode === chatContainer) chatContainer.removeChild(el);
+    }, 10000);
 }
 
 function updateYear(year: number) {
-    yearSlider.value = year.toString(); 
+    currentYear = year;
+    timeInYear = 0; // Reset progression timer on any change
     yearValue.innerText = year.toString();
+    if (yearSlider) yearSlider.value = year.toString();
+    const progress = (year - 2014) / (2026 - 2014) * 100;
+    if (yearProgressFill) yearProgressFill.style.width = `${progress}%`;
+
     const yearsPassed = year - 2014;
     const simulatedPH = 8.1 - (yearsPassed * 0.04);
     const simulatedTemp = 10.0 + (yearsPassed * 0.15);
     applyDataToWorld(simulatedPH, simulatedTemp);
     syncPopulations(year);
+
+    // Narrative Warnings
+    const warning = warnings.find(w => w.year === year);
+    if (warning) {
+        const isCritical = warning.message.includes('CRITICAL') || warning.message.includes('FAILURE');
+        const isWarning = warning.message.includes('WARNING');
+        
+        // Show big red blurb for all warnings now, but more intense for critical
+        warningText.innerText = warning.message;
+        warningBanner.classList.add('active');
+        
+        const type = isCritical ? 'critical' : (isWarning ? 'warning' : 'info');
+        addChatMessage(warning.message, type);
+
+        if (isCritical) {
+            // Screen shake effect
+            const originalPos = camera.position.clone();
+            const shake = { t: 0 };
+            new TWEEN.Tween(shake).to({ t: 1 }, 1000).onUpdate(() => {
+                camera.position.x += (Math.random() - 0.5) * 0.5;
+                camera.position.y += (Math.random() - 0.5) * 0.5;
+            }).onComplete(() => {
+                camera.position.copy(originalPos);
+            }).start();
+        }
+
+        setTimeout(() => {
+            warningBanner.classList.remove('active');
+        }, 8000);
+    }
 
     const greyColor = new THREE.Color(0xcccccc);
     if (assets && assets.coralsGroup) {
@@ -331,6 +526,7 @@ document.body.addEventListener('click', () => {
 document.addEventListener('keydown', (event) => {
     if (event.code === 'Tab') {
         event.preventDefault();
+        if (event.repeat) return;
         toggleBingoBook();
         return;
     }
@@ -338,7 +534,11 @@ document.addEventListener('keydown', (event) => {
     
     switch (event.code) {
         case 'KeyM': // Keep M as an alternative
-            if (controls.isLocked) { controls.unlock(); }
+            if (controls.isLocked) { 
+                // Clear move state when unlocking
+                Object.keys(moveState).forEach(k => (moveState as any)[k] = false);
+                controls.unlock(); 
+            }
             break;
 
         case 'KeyW': moveState.forward = true; break;
@@ -349,6 +549,10 @@ document.addEventListener('keydown', (event) => {
         case 'ShiftLeft':
         case 'ShiftRight': moveState.down = true; break;
         case 'KeyP': isPaused = !isPaused; pauseIndicator.style.display = isPaused ? 'flex' : 'none'; break;
+        case 'ArrowRight':
+        case 'ArrowUp':
+        case 'ArrowDown':
+        case 'ArrowLeft': moveState.fastForward = true; break;
     }
     const curYear = parseInt(yearSlider.value);
     if (event.key === '[' && curYear > 2014) updateYear(curYear - 1);
@@ -364,6 +568,10 @@ document.addEventListener('keyup', (event) => {
         case 'Space': moveState.up = false; break;
         case 'ShiftLeft':
         case 'ShiftRight': moveState.down = false; break;
+        case 'ArrowRight':
+        case 'ArrowUp':
+        case 'ArrowDown':
+        case 'ArrowLeft': moveState.fastForward = false; break;
     }
 });
 
@@ -482,6 +690,22 @@ function animate() {
     }
 
     if (!isPaused) {
+        // Automatic Year Progression
+        const timeMultiplier = moveState.fastForward ? 5.0 : 1.0;
+        timeInYear += delta * timeMultiplier;
+        
+        if (timeInYear >= YEAR_DURATION) {
+            timeInYear = 0;
+            if (currentYear < 2026) {
+                updateYear(currentYear + 1);
+            } else {
+                showEndgameStats();
+            }
+        }
+        // Update a mini-progress bar for the current year
+        const totalProgress = ((currentYear - 2014) + (timeInYear / YEAR_DURATION)) / (2026 - 2014) * 100;
+        if (yearProgressFill) yearProgressFill.style.width = `${totalProgress}%`;
+
         TWEEN.update();
         const schoolPositions = [
             new THREE.Vector3(Math.sin(time*0.0002)*15, 2.5, Math.cos(time*0.0001)*80),
@@ -524,14 +748,16 @@ function animate() {
 }
 
 async function init() {
-    const [popData, coralReg, fishMeta] = await Promise.all([
+    const [popData, coralReg, fishMeta, warningsData] = await Promise.all([
         fetch('/data/populations.json').then(res => res.json()),
         fetch('/data/coral_registry.json').then(res => res.json()),
-        fetch('/data/fish_metadata.json').then(res => res.json())
+        fetch('/data/fish_metadata.json').then(res => res.json()),
+        fetch('/data/warnings.json').then(res => res.json())
     ]);
 
     populations = popData;
     coralMetadata = coralReg;
+    warnings = warningsData;
     fishConfigs = fishMeta.map((f: any) => ({
         ...f,
         color: parseInt(f.color.replace('#', '0x'))
@@ -559,6 +785,14 @@ async function init() {
     scene.add(assets.seaweedsGroup);
 
     updateYear(2014);
+    addChatMessage("SUBMERSIBLE SYSTEMS ONLINE", "info");
+    addChatMessage("ENVIRONMENTAL MONITORING ACTIVE", "info");
+
+    // Pre-warm thumbnails for Bingo Book to avoid crash on first open
+    warmThumbnailCache(fishConfigs, coralConfigs).then(() => {
+        addChatMessage("FIELD BINGO BOOK READY", "info");
+    });
+
     animate();
 }
 

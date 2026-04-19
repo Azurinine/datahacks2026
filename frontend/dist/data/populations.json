@@ -1,57 +1,197 @@
 [
   {
+    "year": 2014,
+    "counts": {
+      "pennatuloidea": 1067,
+      "ptilosarcus": 74,
+      "eugorgia": 2838,
+      "leptogorgia": 328,
+      "octocorallia": 3,
+      "plumarella": 2,
+      "stylatula": 10,
+      "antipathes": 199,
+      "balticina": 400,
+      "paragorgia": 84
+    }
+  },
+  {
+    "year": 2015,
+    "counts": {
+      "pennatuloidea": 207,
+      "ptilosarcus": 106,
+      "eugorgia": 2365,
+      "leptogorgia": 274,
+      "octocorallia": 9,
+      "plumarella": 2,
+      "stylatula": 9,
+      "antipathes": 166,
+      "balticina": 334,
+      "paragorgia": 70
+    }
+  },
+  {
+    "year": 2016,
+    "counts": {
+      "pennatuloidea": 25,
+      "ptilosarcus": 7,
+      "eugorgia": 125,
+      "leptogorgia": 1,
+      "octocorallia": 15,
+      "plumarella": 847,
+      "stylatula": 2,
+      "antipathes": 10,
+      "balticina": 7,
+      "paragorgia": 16
+    }
+  },
+  {
+    "year": 2017,
+    "counts": {
+      "pennatuloidea": 951,
+      "ptilosarcus": 17,
+      "eugorgia": 364,
+      "leptogorgia": 3,
+      "octocorallia": 425,
+      "plumarella": 3,
+      "stylatula": 2,
+      "antipathes": 240,
+      "balticina": 4,
+      "paragorgia": 11
+    }
+  },
+  {
     "year": 2018,
     "counts": {
-      "nezumia": 8,
-      "sebastolobus": 160,
-      "microstomus": 49,
-      "cataetyx": 2,
-      "icelinus": 18,
-      "eptatretus": 15,
-      "sebastes": 764,
-      "anoplopoma": 1,
-      "bathyagonus": 1,
-      "scyliorhinidae": 7,
-      "nettastomatidae": 5,
-      "merluccius": 19,
-      "glyptocephalus": 2,
-      "zaniolepis": 212,
-      "argentina": 3,
-      "ophidiidae": 127,
-      "pleuronectiformes": 169,
-      "porichthys": 32,
-      "parophrys": 4,
-      "zalembius": 20,
-      "hydrolagus": 3,
-      "citharichthys": 44,
-      "xeneretmus": 6,
-      "pleuronichthys": 4,
-      "enophrys": 2,
-      "lycodes": 1,
-      "caliraja": 1
+      "pennatuloidea": 662,
+      "ptilosarcus": 32,
+      "eugorgia": 626,
+      "leptogorgia": 14,
+      "octocorallia": 9,
+      "plumarella": 66,
+      "stylatula": 3,
+      "antipathes": 6,
+      "balticina": 1,
+      "paragorgia": 38
     }
   },
   {
     "year": 2019,
     "counts": {
-      "sebastolobus": 569,
-      "lycenchelys": 25,
-      "myctophidae": 8,
-      "macrouridae": 12,
-      "microstomus": 239,
-      "eptatretus": 112,
-      "cataetyx": 17,
-      "sebastes": 150,
-      "lycodes": 116,
-      "merluccius": 10,
-      "nezumia": 2,
-      "glyptocephalus": 40,
-      "icelinus": 4,
-      "scyliorhinidae": 1,
-      "zaniolepis": 5,
-      "caliraja": 1,
-      "pleuronectiformes": 15,
-      "anoplopoma": 3
+      "pennatuloidea": 1445,
+      "ptilosarcus": 46,
+      "eugorgia": 889,
+      "leptogorgia": 25,
+      "octocorallia": 29,
+      "plumarella": 49,
+      "stylatula": 6,
+      "antipathes": 130,
+      "balticina": 1,
+      "paragorgia": 64
+    }
+  },
+  {
+    "year": 2020,
+    "counts": {
+      "pennatuloidea": 965,
+      "ptilosarcus": 33,
+      "eugorgia": 447,
+      "leptogorgia": 13,
+      "octocorallia": 20,
+      "plumarella": 42,
+      "stylatula": 10,
+      "antipathes": 110,
+      "balticina": 1,
+      "paragorgia": 54
+    }
+  },
+  {
+    "year": 2021,
+    "counts": {
+      "pennatuloidea": 485,
+      "ptilosarcus": 21,
+      "eugorgia": 5,
+      "leptogorgia": 2,
+      "octocorallia": 11,
+      "plumarella": 35,
+      "stylatula": 14,
+      "antipathes": 93,
+      "balticina": 1,
+      "paragorgia": 46
+    }
+  },
+  {
+    "year": 2022,
+    "counts": {
+      "pennatuloidea": 6,
+      "ptilosarcus": 9,
+      "eugorgia": 3,
+      "leptogorgia": 1,
+      "octocorallia": 2,
+      "plumarella": 28,
+      "stylatula": 18,
+      "antipathes": 79,
+      "balticina": 65,
+      "paragorgia": 39
+    }
+  },
+  {
+    "year": 2023,
+    "counts": {
+      "pennatuloidea": 11,
+      "ptilosarcus": 1,
+      "eugorgia": 1,
+      "leptogorgia": 1,
+      "octocorallia": 2,
+      "plumarella": 22,
+      "stylatula": 13,
+      "antipathes": 67,
+      "balticina": 129,
+      "paragorgia": 33
+    }
+  },
+  {
+    "year": 2024,
+    "counts": {
+      "pennatuloidea": 5,
+      "ptilosarcus": 1,
+      "eugorgia": 1,
+      "leptogorgia": 1,
+      "octocorallia": 2,
+      "plumarella": 1,
+      "stylatula": 9,
+      "antipathes": 57,
+      "balticina": 193,
+      "paragorgia": 28
+    }
+  },
+  {
+    "year": 2025,
+    "counts": {
+      "pennatuloidea": 1,
+      "ptilosarcus": 18,
+      "eugorgia": 0,
+      "leptogorgia": 1,
+      "octocorallia": 1,
+      "plumarella": 0,
+      "stylatula": 31,
+      "antipathes": 49,
+      "balticina": 164,
+      "paragorgia": 24
+    }
+  },
+  {
+    "year": 2026,
+    "counts": {
+      "pennatuloidea": 0,
+      "ptilosarcus": 15,
+      "eugorgia": 0,
+      "leptogorgia": 0,
+      "octocorallia": 1,
+      "plumarella": 0,
+      "stylatula": 26,
+      "antipathes": 41,
+      "balticina": 139,
+      "paragorgia": 20
     }
   }
 ]

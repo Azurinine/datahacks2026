@@ -1,0 +1,42 @@
+[
+  {
+    "year": 2014,
+    "message": "SYSTEM ONLINE: Environmental sensors active. Beginning multi-year dive sequence."
+  },
+  {
+    "year": 2015,
+    "message": "CRITICAL: PENNATULOIDEA population has crashed. Habitat loss is likely the cause."
+  },
+  {
+    "year": 2016,
+    "message": "CRITICAL: LEPTOGORGIA population has crashed. Habitat loss is likely the cause. ALSO: EUGORGIA population has crashed. Habitat loss is likely the cause. ALSO: BALTICINA population has crashed. Habitat loss is likely the cause. ALSO: PTILOSARCUS population has crashed. Habitat loss is likely the cause. ALSO: PENNATULOIDEA population has crashed. Habitat loss is likely the cause. ALSO: ANTIPATHES population has crashed. Habitat loss is likely the cause. ALSO: PARAGORGIA population has crashed. Habitat loss is likely the cause. | ALERT: Major decline in overall fish biomass detected. System instability rising."
+  },
+  {
+    "year": 2017,
+    "message": "CRITICAL: PLUMARELLA population has crashed. Habitat loss is likely the cause."
+  },
+  {
+    "year": 2018,
+    "message": "CRITICAL: OCTOCORALLIA population has crashed. Habitat loss is likely the cause. ALSO: ANTIPATHES population has crashed. Habitat loss is likely the cause."
+  },
+  {
+    "year": 2019,
+    "message": "CRITICAL: FLATFISH population has crashed. Habitat loss is likely the cause. ALSO: COMBFISH population has crashed. Habitat loss is likely the cause. ALSO: ROCKFISH population has crashed. Habitat loss is likely the cause."
+  },
+  {
+    "year": 2021,
+    "message": "CRITICAL: EUGORGIA population has crashed. Habitat loss is likely the cause. | WARNING: Black Coral and Bubblegum Coral reached bleaching threshold. Vitality dropping. | ALERT: Major decline in overall fish biomass detected. System instability rising."
+  },
+  {
+    "year": 2022,
+    "message": "CRITICAL: PENNATULOIDEA population has crashed. Habitat loss is likely the cause. | ALERT: Major decline in overall fish biomass detected. System instability rising."
+  },
+  {
+    "year": 2025,
+    "message": "CRITICAL: Widespread bleaching observed! Sea Whip Pen, Bright Sea Fan, Soft Coral and others are dying."
+  },
+  {
+    "year": 2026,
+    "message": "SYSTEM FAILURE: Ecosystem collapse imminent. Eco-vitality at critical levels."
+  }
+]

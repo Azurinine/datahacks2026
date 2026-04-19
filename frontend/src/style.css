@@ -361,7 +361,116 @@ body {
     border: 1px solid rgba(255,255,255,0.3);
 }
 
-/* Range Input Styling */
+/* Temporal Rig Progress Bar */
+#year-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(0, 229, 255, 0.1);
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    margin: 10px 0;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+
+#year-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    box-shadow: 0 0 15px var(--primary);
+    transition: width 0.1s linear;
+}
+
+/* Warning Banner Overhaul */
+#warning-banner {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 700px;
+    max-width: 90vw;
+    background: linear-gradient(135deg, rgba(80, 0, 0, 0.95), rgba(40, 0, 0, 0.98));
+    border: 3px solid var(--danger);
+    border-radius: 4px;
+    padding: 30px;
+    z-index: 400;
+    display: none;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 0 50px rgba(255, 0, 0, 0.6), inset 0 0 30px rgba(255, 0, 0, 0.3);
+    backdrop-filter: blur(15px);
+    text-align: center;
+}
+
+#warning-header {
+    color: var(--danger);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 10px;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+}
+
+#warning-text {
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+#warning-banner.active {
+    display: block;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    animation: criticalAlert 0.5s infinite alternate;
+}
+
+@keyframes criticalAlert {
+    from { transform: translate(-50%, -50%) scale(1); border-color: #ff0000; box-shadow: 0 0 40px rgba(255, 0, 0, 0.4); }
+    to { transform: translate(-50%, -50%) scale(1.02); border-color: #ff8888; box-shadow: 0 0 70px rgba(255, 0, 0, 0.8); }
+}
+
+/* Chat System - Minecraft Style */
+#chat-container {
+    position: absolute;
+    bottom: 40px;
+    left: 40px;
+    width: 450px;
+    max-height: 250px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 4px;
+    pointer-events: none;
+    z-index: 350;
+    mask-image: linear-gradient(to top, black 80%, transparent 100%);
+}
+
+.chat-msg {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 4px 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    text-shadow: 1px 1px 1px #000;
+    animation: chatIn 0.2s ease-out;
+    border-left: 3px solid transparent;
+}
+
+.chat-msg.info { border-left-color: #55ff55; color: #fff; }
+.chat-msg.warning { border-left-color: #ffff55; color: #ffff55; }
+.chat-msg.critical { border-left-color: #ff5555; color: #ff5555; background: rgba(80, 0, 0, 0.6); }
+
+@keyframes chatIn {
+    from { transform: translateX(-20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Range Input Styling (Keep for any remaining sliders) */
 input[type=range] {
     -webkit-appearance: none;
     width: 100%;
@@ -576,17 +685,12 @@ input[type=range]::-webkit-slider-thumb:hover {
     transform: scale(1.1);
 }
 
-.bingo-preview-canvas {
+.bingo-preview-img {
     width: 90px;
     height: 90px;
-    display: block;
+    object-fit: contain;
     margin-bottom: 6px;
-    cursor: grab;
     border-radius: 2px;
-}
-
-.bingo-preview-canvas:active {
-    cursor: grabbing;
 }
 
 .bingo-label {
@@ -598,7 +702,133 @@ input[type=range]::-webkit-slider-thumb:hover {
     transition: color 0.3s;
 }
 
-.discovered .bingo-label {
-    color: #fff;
-    text-shadow: 0 0 4px rgba(255,255,255,0.3);
+/* Endgame Stats Screen Styles */
+#endgame-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(15px);
+    display: none;
+    z-index: 1100;
+}
+
+#endgame-stats {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 1200px;
+    height: 85%;
+    display: none;
+    z-index: 1200;
+    padding: 40px;
+    border-color: var(--primary);
+}
+
+.endgame-grid {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 30px;
+    height: calc(100% - 60px);
+}
+
+.endgame-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: 100%;
+}
+
+.endgame-right {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: 100%;
+}
+
+.stat-box {
+    background: rgba(0, 229, 255, 0.05);
+    border: 1px solid rgba(0, 229, 255, 0.1);
+    padding: 20px;
+    border-radius: 4px;
+}
+
+.stat-box.scrollable {
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.chart-container {
+    height: 250px;
+    width: 100%;
+    position: relative;
+}
+
+#discovery-map {
+    height: 300px;
+    background: rgba(0, 229, 255, 0.03);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#discovery-map::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 100%; height: 1px; background: rgba(0, 229, 255, 0.1);
+}
+
+#discovery-map::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    width: 1px; height: 100%; background: rgba(0, 229, 255, 0.1);
+}
+
+.map-marker {
+    position: absolute;
+    width: 8px; height: 8px;
+    background: var(--primary);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px var(--primary);
+}
+
+.discovery-item {
+    padding: 12px;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.discovery-name {
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.discovery-info {
+    font-size: 12px;
+    text-align: right;
+    color: #88bbcc;
+}
+
+#endgame-restart {
+    background: var(--primary);
+    color: #000;
+    border: none;
+    padding: 15px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+#endgame-restart:hover {
+    background: #fff;
+    box-shadow: 0 0 20px var(--primary);
 }
