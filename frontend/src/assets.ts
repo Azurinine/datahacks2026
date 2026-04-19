@@ -58,6 +58,26 @@ export function createAssetRegistry(fishCount: number): AssetRegistry {
 
     // --- Environment ---
     const environmentGroup = new THREE.Group();
+    // Add sand mounds for floor variety
+    const sandGeo = new THREE.SphereGeometry(1, 8, 8);
+    const sandMat = new THREE.MeshStandardMaterial({ color: 0xc2b280, roughness: 1.0 });
+    for (let i = 0; i < 200; i++) {
+        const x = (Math.random() - 0.5) * 80;
+        const z = (Math.random() - 0.5) * 150;
+        const twist = Math.sin(z * 0.08) * 6;
+        if (Math.abs(x + twist) > 35) continue;
+        
+        const mound = new THREE.Mesh(sandGeo, sandMat);
+        const baseHeight = Math.sin(x * 0.05) * 2 + Math.cos(z * 0.05) * 2 - 5;
+        const wallHeight = Math.pow(Math.abs(x + twist) / 10, 4);
+        const y = baseHeight + Math.min(wallHeight, 12);
+        
+        mound.position.set(x, y - 0.5, z);
+        mound.scale.set(Math.random() * 3 + 2, Math.random() * 0.5 + 0.2, Math.random() * 3 + 2);
+        mound.rotation.y = Math.random() * Math.PI;
+        environmentGroup.add(mound);
+    }
+
     const domeGeo = new THREE.SphereGeometry(100, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeMat = new THREE.MeshBasicMaterial({ color: 0x000205, side: THREE.BackSide, fog: false });
     const dome = new THREE.Mesh(domeGeo, domeMat);
@@ -75,15 +95,16 @@ export function createAssetRegistry(fishCount: number): AssetRegistry {
     const geographyGroup = new THREE.Group();
     const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x3a4b4c, roughness: 1.0, flatShading: true });
     const rockSpheres: { center: THREE.Vector3, radius: number }[] = [];
-    for (let i = 0; i < 250; i++) {
-        const size = Math.random() * 5 + 2;
+    for (let i = 0; i < 600; i++) {
+        const isPebble = i > 300;
+        const size = isPebble ? Math.random() * 0.4 + 0.1 : Math.random() * 5 + 2;
         const x = (Math.random() - 0.5) * 80;
         const z = (Math.random() - 0.5) * 150;
         
-        // Skip large rocks in the central path
-        if (Math.abs(x) < 5 && size > 3) continue;
+        // Skip large rocks in the central path, but allow pebbles
+        if (!isPebble && Math.abs(x) < 5 && size > 3) continue;
 
-        const geo = new THREE.IcosahedronGeometry(size, 1);
+        const geo = new THREE.IcosahedronGeometry(size, isPebble ? 0 : 1);
         const rock = new THREE.Mesh(geo, rockMaterial);
         const twist = Math.sin(z * 0.08) * 6;
         const baseHeight = Math.sin(x * 0.05) * 2 + Math.cos(z * 0.05) * 2 - 5;
@@ -91,16 +112,18 @@ export function createAssetRegistry(fishCount: number): AssetRegistry {
         const y = baseHeight + Math.min(wallHeight, 12);
         
         rock.position.set(x, y - size * 0.2, z);
-        rock.scale.set(1, 1.8 + Math.random() * 1.5, 1); // Taller rocks
+        if (!isPebble) {
+            rock.scale.set(1, 1.8 + Math.random() * 1.5, 1); // Taller rocks
+            rockSpheres.push({ center: rock.position.clone(), radius: size * 0.85 });
+        }
         rock.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
         geographyGroup.add(rock);
-        rockSpheres.push({ center: rock.position.clone(), radius: size * 0.85 });
     }
 
     // --- Reef ---
     const coralsGroup = new THREE.Group();
     const coralMaterial = new THREE.MeshStandardMaterial({ color: 0xff6b81, flatShading: true });
-    for(let i = 0; i < 1500; i++) {
+    for(let i = 0; i < 2500; i++) {
         const cluster = new THREE.Group();
         const sx = (Math.random() - 0.5) * 80;
         const sz = (Math.random() - 0.5) * 150;
@@ -112,11 +135,11 @@ export function createAssetRegistry(fishCount: number): AssetRegistry {
         const sy = baseHeight + Math.min(wallHeight, 12) + 0.2;
         
         cluster.position.set(sx, sy, sz);
-        const numPieces = Math.floor(Math.random()*4)+2;
+        const numPieces = Math.floor(Math.random()*6)+4;
         const clusterColor = new THREE.Color().setHSL(Math.random()*0.12+0.92, 0.8, 0.5); 
         for(let j = 0; j < numPieces; j++) {
-            const isCyl = Math.random()>0.4;
-            const pieceGeo = isCyl ? new THREE.CylinderGeometry(0.02, 0.12, Math.random()*1.0+0.2) : new THREE.SphereGeometry(0.12, 4, 4);
+            const isCyl = Math.random()>0.3;
+            const pieceGeo = isCyl ? new THREE.CylinderGeometry(0.02, 0.15, Math.random()*1.5+0.3) : new THREE.SphereGeometry(0.15, 4, 4);
             const pieceMat = coralMaterial.clone(); pieceMat.color.copy(clusterColor);
             const mesh = new THREE.Mesh(pieceGeo, pieceMat);
             mesh.position.set((Math.random()-0.5)*0.5, Math.random()*0.2, (Math.random()-0.5)*0.5);
@@ -129,7 +152,8 @@ export function createAssetRegistry(fishCount: number): AssetRegistry {
     // --- Seaweed ---
     const seaweedsGroup = new THREE.Group();
     const seaweedMaterial = new THREE.MeshStandardMaterial({ color: 0x2d5a27, side: THREE.DoubleSide, flatShading: true });
-    for (let i = 0; i < 400; i++) {
+    const seaweedColors = [0x2d5a27, 0x3d6a37, 0x1d4a17, 0x4d7a47];
+    for (let i = 0; i < 1200; i++) {
         const x = (Math.random() - 0.5) * 80;
         const z = (Math.random() - 0.5) * 150;
         const twist = Math.sin(z * 0.08) * 6;
@@ -137,17 +161,19 @@ export function createAssetRegistry(fishCount: number): AssetRegistry {
         const wallHeight = Math.pow(Math.abs(x + twist) / 10, 4);
         const y = baseHeight + Math.min(wallHeight, 12) + 0.1;
 
-        const height = Math.random() * 2 + 1;
+        const height = Math.random() * 3 + 1;
         const seaweedGeo = new THREE.PlaneGeometry(0.2, height, 1, 4);
         // Bend it slightly
         const pos = seaweedGeo.attributes.position;
         for(let j=0; j<pos.count; j++) {
             const py = pos.getY(j);
-            pos.setX(j, pos.getX(j) + Math.sin(py * 2) * 0.2);
+            pos.setX(j, pos.getX(j) + Math.sin(py * 1.5 + i) * 0.3);
         }
         seaweedGeo.computeVertexNormals();
 
-        const seaweed = new THREE.Mesh(seaweedGeo, seaweedMaterial);
+        const mat = seaweedMaterial.clone();
+        mat.color.setHex(seaweedColors[Math.floor(Math.random() * seaweedColors.length)]);
+        const seaweed = new THREE.Mesh(seaweedGeo, mat);
         seaweed.position.set(x, y + height / 2, z);
         seaweed.rotation.y = Math.random() * Math.PI;
         seaweedsGroup.add(seaweed);
