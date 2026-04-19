@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-BqOpOnN3.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DySHEh3N.css">
+    <script type="module" crossorigin src="/assets/index-3YUMw6e2.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-C294CpXX.css">
   </head>
   <body>
     <div id="app"></div>
@@ -25,12 +25,12 @@
         <div class="control-key"><kbd>SHIFT</kbd>DESCEND</div>
         <div class="control-key"><kbd>MOUSE</kbd>LOOK</div>
         <div class="control-key"><kbd>TAB</kbd>BINGO BOOK</div>
-        <div class="control-key"><kbd>CLICK</kbd>SCAN</div>
+        <div class="control-key"><kbd>CLICK / E</kbd>SCAN</div>
         <div class="control-key"><kbd>P</kbd>FREEZE</div>
         <div class="control-key"><kbd>M</kbd>MENU</div>
         <div class="control-key"><kbd>→</kbd>FAST FORWARD</div>
       </div>
-      <p class="click-to-start">[ CLICK ANYWHERE TO START ]</p>
+      <p class="click-to-start">[ CLICK OR PRESS SPACE TO START ]</p>
     </div>
 
     <div id="crosshair"><div class="dot"></div></div>
@@ -100,8 +100,10 @@
 
     <!-- Fish Encyclopedia Popup -->
     <div id="fish-popup" class="hud-panel">
-      <div id="popup-close">×</div>
-      <div class="panel-header">SPECIES ENCYCLOPEDIA</div>
+      <div class="panel-header">
+        SPECIES ENCYCLOPEDIA
+        <div id="popup-close">×</div>
+      </div>
       <canvas id="popup-species-canvas" width="280" height="190"></canvas>
       <div id="popup-stats"></div>
       <h2 id="fish-name">GARIBALDI</h2>
@@ -140,8 +142,28 @@
             <div class="stat-label">SONAR DISCOVERY LOCATIONS</div>
             <div id="discovery-map"></div>
           </div>
-          <button id="endgame-restart">RE-INITIATE DIVE</button>
+          <button id="endgame-restart">RE-INITIATE DIVE <span style="opacity: 0.6; font-size: 10px;">[R]</span></button>
         </div>
+      </div>
+    </div>
+
+    <!-- Tutorial System -->
+    <div id="tutorial-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.7); z-index: 1500; backdrop-filter: blur(4px);"></div>
+    
+    <div id="tutorial-prompt" class="hud-panel" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000; text-align: center; flex-direction: column; gap: 20px; width: 400px;">
+      <div class="panel-header" style="justify-content: center; font-size: 14px; margin-bottom: 5px;">TUTORIAL INITIALIZATION</div>
+      <p style="color: var(--text-main); font-size: 16px; margin: 0; line-height: 1.5;">Would you like to run the field operator tutorial?</p>
+      <div style="display: flex; justify-content: center; gap: 20px; margin-top: 10px;">
+        <button id="btn-tutorial-yes" class="btn-primary">YES <span style="opacity: 0.6; font-size: 10px;">[Y]</span></button>
+        <button id="btn-tutorial-no" class="btn-secondary">NO <span style="opacity: 0.6; font-size: 10px;">[N]</span></button>
+      </div>
+    </div>
+
+    <div id="tutorial-tooltip" class="hud-panel" style="display: none; position: absolute; z-index: 2000; width: 320px; flex-direction: column; gap: 15px;">
+      <div class="panel-header" style="margin-bottom: 5px;">FIELD GUIDE</div>
+      <p id="tutorial-text" style="color: var(--text-main); font-size: 14px; margin: 0; line-height: 1.6;"></p>
+      <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
+        <button id="btn-tutorial-next" class="btn-primary">NEXT <span style="opacity: 0.6; font-size: 10px;">[SPACE / ⏎]</span></button>
       </div>
     </div>
 

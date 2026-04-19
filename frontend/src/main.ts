@@ -108,6 +108,15 @@ const notifNewEl = document.getElementById('notif-new')!;
 const notifWarningEl = document.getElementById('notif-warning')!;
 const notifCriticalEl = document.getElementById('notif-critical')!;
 
+// Tutorial UI
+const tutorialPrompt = document.getElementById('tutorial-prompt')!;
+const tutorialOverlay = document.getElementById('tutorial-overlay')!;
+const tutorialTooltip = document.getElementById('tutorial-tooltip')!;
+const tutorialText = document.getElementById('tutorial-text')!;
+const btnTutorialYes = document.getElementById('btn-tutorial-yes')!;
+const btnTutorialNo = document.getElementById('btn-tutorial-no')!;
+const btnTutorialNext = document.getElementById('btn-tutorial-next')!;
+
 // System State
 let isPaused = false;
 let gameEnded = false;
@@ -117,6 +126,18 @@ let warningCount = 0;
 let criticalCount = 0;
 let previewDispose: (() => void) | null = null;
 let bingoPreviewDisposes: (() => void)[] = [];
+
+// Tutorial State
+let tutorialOffered = false;
+let isTutorialRunning = false;
+let currentTutorialStep = 0;
+const tutorialSteps = [
+    { text: "This is your mission timeline. You have until 2026 to catalog the ecosystem. You can fast-forward time using the Arrow keys if the environment is stable.", target: "panel-controls" },
+    { text: "Monitor these Environment Sensors closely. Rising temperatures and shifting pH levels are early warnings of ecosystem collapse.", target: "panel-stats" },
+    { text: "The Field Bingo Book is your primary log. Press TAB to open it now and view your catalog.", target: "bingo-trigger", requireAction: "open-bingo" },
+    { text: "This grid shows all species. Discovered ones appear in color. Dead or bleached ones are marked. Press TAB again to close the book.", target: null, requireAction: "close-bingo" },
+    { text: "Your objective: Explore the reef, scan unidentified species, and complete the Bingo Book before the 2026 deadline. Press M at any time to view all commands. Good luck, Operator.", target: null }
+];
 let headlightOn = true;
 let blurEnabled = true;
 let isInternalUnlock = false; // Flag to skip next unlock event
@@ -182,6 +203,81 @@ function closeFishPopup() {
         pauseIndicator.style.display = 'none';
         controls.lock(); // Re-lock immediately
     }
+}
+
+function showTutorialStep(index: number) {
+    // Clear old highlights
+    document.querySelectorAll('.highlight-tutorial').forEach(el => el.classList.remove('highlight-tutorial'));
+
+    if (index >= tutorialSteps.length) {
+        // End tutorial
+        isTutorialRunning = false;
+        tutorialOverlay.style.display = 'none';
+        tutorialTooltip.style.display = 'none';
+        isPaused = false;
+        pauseIndicator.style.display = 'none';
+        controls.lock();
+        return;
+    }
+
+    const step = (tutorialSteps as any)[index];
+    tutorialText.innerText = step.text;
+
+    // Show/Hide NEXT button based on requirement
+    btnTutorialNext.style.display = step.requireAction ? 'none' : 'block';
+
+    if (step.target) {
+        const targetEl = document.getElementById(step.target);
+        if (targetEl) {
+            targetEl.classList.add('highlight-tutorial');
+            
+            // Position tooltip next to target
+            const rect = targetEl.getBoundingClientRect();
+            const tooltipWidth = 320;
+            const margin = 20;
+
+            if (rect.left < window.innerWidth / 2) {
+                // Left side element, put tooltip to the right
+                let leftPos = rect.right + margin;
+                if (leftPos + tooltipWidth > window.innerWidth - margin) {
+                    leftPos = window.innerWidth - tooltipWidth - margin;
+                }
+                tutorialTooltip.style.left = `${leftPos}px`;
+                tutorialTooltip.style.top = `${Math.max(margin, Math.min(rect.top, window.innerHeight - 200))}px`;
+                tutorialTooltip.style.right = 'auto';
+                tutorialTooltip.style.transform = 'none';
+            } else {
+                // Right side element, put tooltip to the left
+                let rightPos = window.innerWidth - rect.left + margin;
+                if (rightPos + tooltipWidth > window.innerWidth - margin) {
+                    rightPos = window.innerWidth - tooltipWidth - margin;
+                }
+                tutorialTooltip.style.right = `${rightPos}px`;
+                tutorialTooltip.style.top = `${Math.max(margin, Math.min(rect.top, window.innerHeight - 200))}px`;
+                tutorialTooltip.style.left = 'auto';
+                tutorialTooltip.style.transform = 'none';
+            }
+        }
+    } else {
+        // Center tooltip explicitly
+        tutorialTooltip.style.left = '50%';
+        tutorialTooltip.style.top = '50%';
+        tutorialTooltip.style.right = 'auto';
+        tutorialTooltip.style.transform = 'translate(-50%, -50%)';
+    }
+
+    const label = (index === tutorialSteps.length - 1) ? "FINISH" : "NEXT";
+    btnTutorialNext.innerHTML = `${label} <span style="opacity: 0.6; font-size: 10px;">[SPACE / ⏎]</span>`;
+}
+
+function startTutorial() {
+    isTutorialRunning = true;
+    isPaused = true;
+    pauseIndicator.style.display = 'flex';
+    currentTutorialStep = 0;
+    tutorialOverlay.style.display = 'block';
+    tutorialTooltip.style.display = 'flex';
+    showTutorialStep(currentTutorialStep);
 }
 
 function showPopup(id: string, title: string, desc: string, isManualScan: boolean = false) {
@@ -548,9 +644,18 @@ function toggleBingoBook() {
         if (fishPopup.style.display === 'block') {
             closeFishPopup();
         } else {
-            isPaused = false;
-            pauseIndicator.style.display = 'none';
-            controls.lock(); // Re-lock immediately
+            // Fix: Don't unpause if tutorial is running
+            if (!isTutorialRunning) {
+                isPaused = false;
+                pauseIndicator.style.display = 'none';
+                controls.lock(); // Re-lock immediately
+            }
+        }
+
+        // Tutorial Advance: Close Bingo
+        if (isTutorialRunning && (tutorialSteps[currentTutorialStep] as any).requireAction === "close-bingo") {
+            currentTutorialStep++;
+            showTutorialStep(currentTutorialStep);
         }
     } else {
         newCount = 0;
@@ -572,6 +677,12 @@ function toggleBingoBook() {
         // Reset move state when opening menu
         Object.keys(moveState).forEach(k => (moveState as any)[k] = false);
         controls.unlock();
+
+        // Tutorial Advance: Open Bingo
+        if (isTutorialRunning && (tutorialSteps[currentTutorialStep] as any).requireAction === "open-bingo") {
+            currentTutorialStep++;
+            showTutorialStep(currentTutorialStep);
+        }
     }
 }
 
@@ -702,7 +813,34 @@ function updateYear(year: number) {
 // 3. EVENT LISTENERS
 // ==========================================
 
-instructions.addEventListener('click', () => controls.lock());
+instructions.addEventListener('click', () => {
+    if (!tutorialOffered) {
+        instructions.style.opacity = '0';
+        instructions.style.pointerEvents = 'none';
+        tutorialPrompt.style.display = 'flex';
+        tutorialOffered = true;
+    } else {
+        controls.lock();
+    }
+});
+
+btnTutorialNo.addEventListener('click', () => {
+    tutorialPrompt.style.display = 'none';
+    isTutorialRunning = false;
+    isPaused = false;
+    controls.lock();
+});
+
+btnTutorialYes.addEventListener('click', () => {
+    tutorialPrompt.style.display = 'none';
+    startTutorial();
+});
+
+btnTutorialNext.addEventListener('click', () => {
+    currentTutorialStep++;
+    showTutorialStep(currentTutorialStep);
+});
+
 controls.addEventListener('lock', () => {
     instructions.style.opacity = '0';
     instructions.style.pointerEvents = 'none';
@@ -744,6 +882,37 @@ document.body.addEventListener('click', () => {
 });
 
 document.addEventListener('keydown', (event) => {
+    // Instructions / Start Intercept
+    if (instructions.style.opacity === '1') {
+        if (event.code === 'Enter' || event.code === 'Space') {
+            instructions.click();
+            return;
+        }
+    }
+
+    // Endgame Restart Intercept
+    if (endgameStatsEl.style.display === 'flex') {
+        if (event.code === 'KeyR') {
+            restartBtn.click();
+            return;
+        }
+    }
+
+    // Tutorial Intercepts
+    if (tutorialPrompt.style.display === 'flex') {
+        if (event.code === 'KeyY') { btnTutorialYes.click(); return; }
+        if (event.code === 'KeyN') { btnTutorialNo.click(); return; }
+    }
+    if (tutorialTooltip.style.display === 'flex') {
+        if (event.code === 'Space' || event.code === 'Enter') { 
+            event.preventDefault(); 
+            if (btnTutorialNext.style.display !== 'none') {
+                btnTutorialNext.click(); 
+            }
+            return; 
+        }
+    }
+
     if (event.code === 'Tab') {
         event.preventDefault();
         if (event.repeat) return;
@@ -753,11 +922,13 @@ document.addEventListener('keydown', (event) => {
     // Remove manual Escape handling entirely - rely on 'unlock' listener
     
     switch (event.code) {
-        case 'KeyM': // Keep M as an alternative
+        case 'KeyM': // Toggle Menu
             if (controls.isLocked) { 
                 // Clear move state when unlocking
                 Object.keys(moveState).forEach(k => (moveState as any)[k] = false);
                 controls.unlock(); 
+            } else if (instructions.style.opacity === '1') {
+                instructions.click();
             }
             break;
 
@@ -768,6 +939,11 @@ document.addEventListener('keydown', (event) => {
         case 'Space': moveState.up = true; break;
         case 'ShiftLeft':
         case 'ShiftRight': moveState.down = true; break;
+        case 'KeyE': // Scan specimen in crosshair
+            if (controls.isLocked) {
+                window.dispatchEvent(new PointerEvent('pointerdown', { button: 0 }));
+            }
+            break;
         case 'KeyF': headlightOn = !headlightOn; headlight.visible = headlightOn; headlightBeam.visible = headlightOn; break;
         case 'KeyB': blurEnabled = !blurEnabled; blurPass.enabled = blurEnabled; break;
         case 'KeyP': isPaused = !isPaused; pauseIndicator.style.display = isPaused ? 'flex' : 'none'; break;
