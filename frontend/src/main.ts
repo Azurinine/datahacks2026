@@ -135,8 +135,14 @@ const floor = new THREE.Mesh(floorGeometry, floorMaterial);
 scene.add(floor);
 
 // Assets
-const FISH_COUNT = 800;
-const assets: AssetRegistry = createAssetRegistry(FISH_COUNT);
+const fishConfigs = [
+    { id: 'chromis', color: 0x55aaff, count: 200, speedMultiplier: 1.0, scale: 1.0, preferredHeight: 3.0 },
+    { id: 'clownfish', color: 0xffaa55, count: 200, speedMultiplier: 1.2, scale: 0.8, preferredHeight: 2.0 },
+    { id: 'tang', color: 0x55ffaa, count: 200, speedMultiplier: 0.8, scale: 1.2, preferredHeight: 4.0 },
+    { id: 'anthias', color: 0xff55aa, count: 200, speedMultiplier: 1.5, scale: 0.9, preferredHeight: 2.5 },
+];
+const FISH_COUNT = fishConfigs.reduce((s, c) => s + c.count, 0);
+const assets: AssetRegistry = createAssetRegistry(fishConfigs);
 scene.add(assets.fishMesh); scene.add(assets.coralsGroup); scene.add(assets.sunRaysGroup); scene.add(assets.geographyGroup); scene.add(assets.environmentGroup); scene.add(assets.seaweedsGroup);
 const dyingColor = new THREE.Color(0x445566), tempColor = new THREE.Color();
 function updateFish(vitality: number) {
@@ -217,19 +223,38 @@ function animate() {
 
     if (!isPaused) {
         const schoolPositions = [
-            new THREE.Vector3(Math.sin(time*0.0005)*15, 12, Math.cos(time*0.0003)*80),
-            new THREE.Vector3(Math.cos(time*0.0004)*10, 25, Math.sin(time*0.0002)*70),
-            new THREE.Vector3(Math.sin(time*0.0006)*20, 18, Math.cos(time*0.0004)*90),
-            new THREE.Vector3(Math.cos(time*0.00055)*12, 5, Math.sin(time*0.00035)*85)
+            new THREE.Vector3(Math.sin(time*0.0005)*15, 2.5, Math.cos(time*0.0003)*80),
+            new THREE.Vector3(Math.cos(time*0.0004)*10, 4.0, Math.sin(time*0.0002)*70),
+            new THREE.Vector3(Math.sin(time*0.0006)*20, 3.5, Math.cos(time*0.0004)*90),
+            new THREE.Vector3(Math.cos(time*0.00055)*12, 1.5, Math.sin(time*0.00035)*85)
         ];
         const playerPos = camera.position;
         for (let i = 0; i < FISH_COUNT; i++) {
             assets.fishMesh.getMatrixAt(i, _matrix); _matrix.decompose(_position, _quaternion, _scale);
             const data = assets.fishData[i], schoolCenter = schoolPositions[data.schoolId], targetPos = schoolCenter.clone().add(data.schoolOffset);
-            if (_position.distanceTo(playerPos) < 60) {
-                _position.lerp(targetPos, 0.02 * (Math.max(0.1, (parseInt(yearSlider.value)-2014)/12*1.5)));
-                dummy.position.copy(_position); dummy.lookAt(schoolCenter.clone().add(data.schoolOffset).add(new THREE.Vector3(0,0,10)));
-                dummy.updateMatrix(); assets.fishMesh.setMatrixAt(i, dummy.matrix);
+            
+            // 1. Despawn/Respawn: If too far from player, snap to new location near the player
+            if (_position.distanceTo(playerPos) > 70) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 30 + Math.random() * 20;
+                _position.set(playerPos.x + Math.cos(angle)*dist, data.preferredHeight, playerPos.z + Math.sin(angle)*dist);
+                _matrix.setPosition(_position);
+                assets.fishMesh.setMatrixAt(i, _matrix);
+            }
+
+            // 2. Varied Directions: Smoothly lerp position and orient based on movement direction
+            const prevPos = _position.clone();
+            _position.lerp(targetPos, 0.02 * (Math.max(0.1, (parseInt(yearSlider.value)-2014)/12*1.5)));
+            
+            // Only update rotation if fish actually moved significantly
+            if (_position.distanceTo(prevPos) > 0.001) {
+                dummy.position.copy(_position);
+                // Look toward movement direction (targetPos), but add variation per fish
+                dummy.lookAt(targetPos);
+                // Randomize local yaw/pitch slightly so they don't look like robots
+                dummy.rotateY(Math.sin(time * 0.002 + i) * 0.2); 
+                dummy.updateMatrix(); 
+                assets.fishMesh.setMatrixAt(i, dummy.matrix);
             }
         }
         assets.fishMesh.instanceMatrix.needsUpdate = true;

@@ -1,5 +1,14 @@
 import * as THREE from 'three';
 
+export interface FishConfig {
+    id: string;
+    color: number;
+    count: number;
+    speedMultiplier: number;
+    scale: number;
+    preferredHeight: number;
+}
+
 export interface AssetRegistry {
     fishMesh: THREE.InstancedMesh;
     coralsGroup: THREE.Group;
@@ -23,36 +32,45 @@ export interface AssetRegistry {
     sunRayMaterial: THREE.MeshBasicMaterial;
 }
 
-export function createAssetRegistry(fishCount: number): AssetRegistry {
+export function createAssetRegistry(configs: FishConfig[]): AssetRegistry {
+    const totalFishCount = configs.reduce((sum, cfg) => sum + cfg.count, 0);
+
     // --- Fish System ---
     const fishGeometry = new THREE.ConeGeometry(0.15, 0.8, 4);
     fishGeometry.rotateX(Math.PI / 2); 
     const fishMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
-    const fishMesh = new THREE.InstancedMesh(fishGeometry, fishMaterial, fishCount);
+    const fishMesh = new THREE.InstancedMesh(fishGeometry, fishMaterial, totalFishCount);
     
-    const colorArray = new Float32Array(fishCount * 3);
+    const colorArray = new Float32Array(totalFishCount * 3);
     const instColor = new THREE.Color();
-    const fishPalettes = [0x55aaff, 0xffaa55, 0x55ffaa, 0xff55aa];
     const dummy = new THREE.Object3D();
     const fishData: AssetRegistry['fishData'] = [];
-    const numSchools = fishPalettes.length;
-    const schoolCenters = fishPalettes.map(() => ({
-        pos: new THREE.Vector3((Math.random()-0.5)*20, Math.random()*8+2, (Math.random()-0.5)*100),
+    
+    const schoolCenters = configs.map(() => ({
+        pos: new THREE.Vector3((Math.random()-0.5)*20, Math.random()*3 + 1, (Math.random()-0.5)*100),
     }));
 
-    for (let i = 0; i < fishCount; i++) {
-        const schoolId = i % numSchools;
-        instColor.setHex(fishPalettes[schoolId]).toArray(colorArray, i * 3);
-        const center = schoolCenters[schoolId].pos;
-        const offset = new THREE.Vector3((Math.random()-0.5)*10, (Math.random()-0.5)*4, (Math.random()-0.5)*10);
-        dummy.position.copy(center).add(offset);
-        dummy.updateMatrix();
-        fishMesh.setMatrixAt(i, dummy.matrix);
-        fishData.push({
-            baseSpeed: Math.random()*0.04+0.03, turnSpeed: (Math.random()-0.5)*0.02, preferredHeight: center.y+offset.y,
-            originalColor: new THREE.Color(fishPalettes[schoolId]), schoolOffset: offset, schoolId: schoolId
-        });
-    }
+    let globalIdx = 0;
+    configs.forEach((cfg, schoolId) => {
+        for (let i = 0; i < cfg.count; i++) {
+            instColor.setHex(cfg.color).toArray(colorArray, globalIdx * 3);
+            const center = schoolCenters[schoolId].pos;
+            const offset = new THREE.Vector3((Math.random()-0.5)*10, (Math.random()-0.5)*2, (Math.random()-0.5)*10);
+            dummy.position.copy(center).add(offset);
+            dummy.scale.setScalar(cfg.scale);
+            dummy.updateMatrix();
+            fishMesh.setMatrixAt(globalIdx, dummy.matrix);
+            fishData.push({
+                baseSpeed: (Math.random()*0.04+0.03) * cfg.speedMultiplier, 
+                turnSpeed: (Math.random()-0.5)*0.02, 
+                preferredHeight: cfg.preferredHeight + offset.y,
+                originalColor: new THREE.Color(cfg.color), 
+                schoolOffset: offset, 
+                schoolId: schoolId
+            });
+            globalIdx++;
+        }
+    });
     fishMesh.instanceColor = new THREE.InstancedBufferAttribute(colorArray, 3);
     fishMesh.instanceColor.needsUpdate = true;
 
