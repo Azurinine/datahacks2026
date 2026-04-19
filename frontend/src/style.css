@@ -685,12 +685,34 @@ input[type=range]::-webkit-slider-thumb:hover {
     transform: scale(1.1);
 }
 
-.bingo-preview-img {
-    width: 90px;
-    height: 90px;
-    object-fit: contain;
-    margin-bottom: 6px;
-    border-radius: 2px;
+.bingo-slot.extinct {
+    border-color: var(--danger);
+    background: rgba(255, 68, 68, 0.05);
+}
+
+.bingo-slot.extinct .bingo-preview-img {
+    filter: grayscale(1) brightness(0.5);
+}
+
+.extinct-cross {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 80px;
+    color: rgba(255, 68, 68, 0.6);
+    pointer-events: none;
+    font-weight: 100;
+    line-height: 1;
+}
+
+.status-label {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--danger);
+    letter-spacing: 1px;
 }
 
 .bingo-label {
@@ -706,8 +728,8 @@ input[type=range]::-webkit-slider-thumb:hover {
 #endgame-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(15px);
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(20px);
     display: none;
     z-index: 1100;
 }
@@ -716,56 +738,102 @@ input[type=range]::-webkit-slider-thumb:hover {
     position: fixed;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 90%;
-    max-width: 1200px;
-    height: 85%;
-    display: none;
+    width: 95%;
+    max-width: 1300px;
+    height: 90%;
+    display: none; /* Keep hidden by default */
     z-index: 1200;
-    padding: 40px;
+    padding: 30px;
     border-color: var(--primary);
-}
-
-.endgame-grid {
-    display: grid;
-    grid-template-columns: 1fr 350px;
-    gap: 30px;
-    height: calc(100% - 60px);
-}
-
-.endgame-left {
-    display: flex;
+    background: rgba(5, 15, 20, 0.8);
     flex-direction: column;
     gap: 20px;
-    height: 100%;
 }
 
-.endgame-right {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    height: 100%;
-}
-
-.stat-box {
-    background: rgba(0, 229, 255, 0.05);
-    border: 1px solid rgba(0, 229, 255, 0.1);
-    padding: 20px;
-    border-radius: 4px;
-}
-
-.stat-box.scrollable {
-    overflow-y: auto;
-    flex-grow: 1;
-}
-
-.chart-container {
-    height: 250px;
+#discovery-cards-section {
     width: 100%;
+}
+
+#discovery-cards-scroller {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding: 10px 5px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+}
+
+#discovery-cards-scroller::-webkit-scrollbar { height: 4px; }
+#discovery-cards-scroller::-webkit-scrollbar-thumb { background: var(--primary); }
+
+.discovery-card {
+    flex: 0 0 160px;
+    background: rgba(0, 229, 255, 0.05);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    padding: 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
     position: relative;
+    overflow: hidden;
+}
+
+.discovery-card:hover {
+    background: rgba(0, 229, 255, 0.15);
+    border-color: var(--primary);
+    transform: translateY(-5px);
+}
+
+.discovery-card.active {
+    background: rgba(0, 229, 255, 0.2);
+    border-color: var(--secondary);
+    box-shadow: 0 0 15px rgba(0, 255, 170, 0.3);
+}
+
+.discovery-card img {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    margin-bottom: 10px;
+}
+
+.discovery-card-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #fff;
+    text-transform: uppercase;
+}
+
+.endgame-content-v2 {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 20px;
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.endgame-chart-area {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.endgame-chart-area .stat-box {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.endgame-map-area {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 #discovery-map {
-    height: 300px;
+    height: 350px;
     background: rgba(0, 229, 255, 0.03);
     border: 1px solid rgba(0, 229, 255, 0.2);
     position: relative;

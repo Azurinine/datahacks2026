@@ -95,25 +95,28 @@
     <div id="endgame-overlay"></div>
     <div id="endgame-stats" class="hud-panel">
       <div class="panel-header">MISSION COMPLETE: CHANNEL ISLANDS EXPEDITION</div>
-      <div class="endgame-grid">
-        <div class="endgame-left">
+      
+      <!-- Discovery Cards Carousel -->
+      <div id="discovery-cards-section">
+        <div class="stat-label">DISCOVERED SPECIES [ SELECT FOR ARCHIVE DATA ]</div>
+        <div id="discovery-cards-scroller"></div>
+      </div>
+
+      <div class="endgame-content-v2">
+        <div class="endgame-chart-area">
           <div class="stat-box">
-            <div class="stat-label">TOTAL POPULATION DECLINE (2014-2026)</div>
+            <div id="active-species-title" class="stat-label">TOTAL ECOSYSTEM TREND (2014-2026)</div>
             <div class="chart-container">
               <canvas id="population-chart"></canvas>
             </div>
           </div>
+        </div>
+        <div class="endgame-map-area">
           <div class="stat-box">
-            <div class="stat-label">SPECIES DISCOVERY SONAR MAP</div>
+            <div class="stat-label">SONAR DISCOVERY LOCATIONS</div>
             <div id="discovery-map"></div>
           </div>
-        </div>
-        <div class="endgame-right">
-          <div class="stat-box scrollable">
-            <div class="stat-label">FIELD DISCOVERY LOG</div>
-            <div id="discovery-list"></div>
-          </div>
-          <button id="endgame-restart" onclick="window.location.reload()">RE-INITIATE DIVE</button>
+          <button id="endgame-restart">RE-INITIATE DIVE</button>
         </div>
       </div>
     </div>

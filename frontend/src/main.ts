@@ -100,11 +100,14 @@ const chatContainer = document.getElementById('chat-container')!;
 const endgameStatsEl = document.getElementById('endgame-stats')!;
 const endgameOverlay = document.getElementById('endgame-overlay')!;
 const discoveryMapEl = document.getElementById('discovery-map')!;
-const discoveryListEl = document.getElementById('discovery-list')!;
+const discoveryCardsScroller = document.getElementById('discovery-cards-scroller')!;
+const activeSpeciesTitle = document.getElementById('active-species-title')!;
+const restartBtn = document.getElementById('endgame-restart')!;
 
 // System State
 let isPaused = false;
 let gameEnded = false;
+let missionChart: Chart | null = null;
 let previewDispose: (() => void) | null = null;
 let bingoPreviewDisposes: (() => void)[] = [];
 let isInternalUnlock = false; // Flag to skip next unlock event
@@ -205,6 +208,8 @@ function showPopup(id: string, title: string, desc: string) {
         
         localStorage.setItem('discoveryLog', JSON.stringify(discoveryLog));
         needsBingoRender = true; // Mark for re-render
+        
+        addChatMessage(`NEW DISCOVERY: ${title.toUpperCase()}`, "info");
     }
 }
 
@@ -233,12 +238,20 @@ function renderBingoBook() {
         bingoGridEl.appendChild(header);
         category.species.forEach(species => {
             const isDiscovered = discoveredSpecies.has(species.id);
+            
+            // Check status
+            const currentPop = populations.find(p => p.year === currentYear);
+            const coralCfg = coralMetadata.find((c: any) => c.id === species.id);
+            const isExtinct = currentPop ? (currentPop.counts[species.id] || 0) <= 0 : false;
+            const isBleached = coralCfg && coralCfg.bleach_year !== null && currentYear >= coralCfg.bleach_year;
+            const isDead = isExtinct || isBleached;
+
             const slot = document.createElement('div');
-            slot.className = `bingo-slot ${isDiscovered ? 'discovered' : ''}`;
+            slot.className = `bingo-slot ${isDiscovered ? 'discovered' : ''} ${isDead ? 'extinct' : ''}`;
+            
             const icon = document.createElement('div');
             icon.className = 'bingo-icon';
             if (isDiscovered) {
-                const coralCfg = coralMetadata.find((c: any) => c.id === species.id);
                 const fishCfg = fishConfigs.find((f: any) => f.id === species.id);
                 const cfg = coralCfg || fishCfg;
                 const type = coralCfg ? 'coral' : 'fish';
@@ -254,6 +267,19 @@ function renderBingoBook() {
             } else {
                 icon.innerText = '?';
             }
+
+            if (isDead) {
+                const cross = document.createElement('div');
+                cross.className = 'extinct-cross';
+                cross.innerText = '×';
+                slot.appendChild(cross);
+                
+                const label = document.createElement('div');
+                label.className = 'status-label';
+                label.innerText = isBleached ? 'BLEACHED' : 'EXTINCT';
+                slot.appendChild(label);
+            }
+
             const label = document.createElement('div');
             label.className = 'bingo-label';
             label.innerText = species.name;
@@ -261,6 +287,69 @@ function renderBingoBook() {
             slot.appendChild(label);
             bingoGridEl.appendChild(slot);
         });
+    });
+}
+
+function renderMissionChart(speciesId: string | 'total', title: string, color: string) {
+    if (missionChart) missionChart.destroy();
+    
+    const years = populations.map(p => p.year);
+    let data: number[] = [];
+    
+    if (speciesId === 'total') {
+        const totalPopulations = populations.map(p => Object.values(p.counts).reduce((a, b) => a + b, 0));
+        const initialTotal = totalPopulations[0] || 1;
+        data = totalPopulations.map(v => (v / initialTotal) * 100);
+    } else {
+        const speciesHistory = populations.map(p => p.counts[speciesId] || 0);
+        const initialCount = speciesHistory[0] || 1;
+        data = speciesHistory.map(v => (v / initialCount) * 100);
+    }
+
+    activeSpeciesTitle.innerText = `${title.toUpperCase()} TREND (2014-2026)`;
+    
+    // Find discovery point for this species if it exists
+    const discovery = discoveryLog.find(d => d.id === speciesId);
+    
+    const ctx = (document.getElementById('population-chart') as HTMLCanvasElement).getContext('2d')!;
+    missionChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: years,
+            datasets: [{
+                label: title,
+                data: data,
+                borderColor: color,
+                backgroundColor: color.replace(')', ', 0.1)').replace('rgb', 'rgba'),
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: years.map(y => discovery && y === discovery.year ? 8 : 0),
+                pointBackgroundColor: '#fff',
+                pointBorderColor: color,
+                pointBorderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { 
+                    title: { display: true, text: '% OF 2014 POPULATION', color: '#88bbcc', font: { family: 'Share Tech Mono', size: 10 } },
+                    beginAtZero: true, 
+                    max: 120,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
+                    ticks: { color: '#88bbcc', font: { family: 'Share Tech Mono' } } 
+                },
+                x: { 
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
+                    ticks: { color: '#88bbcc', font: { family: 'Share Tech Mono' } } 
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
     });
 }
 
@@ -276,67 +365,67 @@ function showEndgameStats() {
     
     // Show stats
     endgameOverlay.style.display = 'block';
-    endgameStatsEl.style.display = 'block';
+    endgameStatsEl.style.display = 'flex';
     
-    // 1. Population Chart
-    const years = populations.map(p => p.year);
-    const totalPopulations = populations.map(p => Object.values(p.counts).reduce((a, b) => a + b, 0));
+    // 1. Discovery Cards
+    discoveryCardsScroller.innerHTML = '';
     
-    const ctx = (document.getElementById('population-chart') as HTMLCanvasElement).getContext('2d')!;
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: years,
-            datasets: [{
-                label: 'Total Marine Population',
-                data: totalPopulations,
-                borderColor: '#00e5ff',
-                backgroundColor: 'rgba(0, 229, 255, 0.1)',
-                fill: true,
-                tension: 0.4,
-                pointBackgroundColor: '#00e5ff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: false, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#88bbcc' } },
-                x: { grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#88bbcc' } }
-            },
-            plugins: {
-                legend: { display: false }
-            }
-        }
+    // Add "Total" card
+    const totalCard = document.createElement('div');
+    totalCard.className = 'discovery-card active';
+    totalCard.innerHTML = `
+        <div style="font-size: 40px; margin-bottom: 10px; color: var(--primary)">Σ</div>
+        <div class="discovery-card-name">TOTAL ECOSYSTEM</div>
+    `;
+    totalCard.onclick = () => {
+        document.querySelectorAll('.discovery-card').forEach(c => c.classList.remove('active'));
+        totalCard.classList.add('active');
+        renderMissionChart('total', 'Total Ecosystem', '#00e5ff');
+    };
+    discoveryCardsScroller.appendChild(totalCard);
+
+    discoveryLog.forEach(d => {
+        const fishCfg = fishConfigs.find(f => f.id === d.id);
+        const coralCfg = coralMetadata.find(c => c.id === d.id);
+        const color = fishCfg ? `#${fishCfg.color.toString(16).padStart(6, '0')}` : (coralCfg ? coralCfg.color : '#00e5ff');
+        const type = coralCfg ? 'coral' : 'fish';
+        
+        const card = document.createElement('div');
+        card.className = 'discovery-card';
+        const thumbUrl = generateThumbnail(type, { id: d.id, color: color });
+        
+        card.innerHTML = `
+            <img src="${thumbUrl}">
+            <div class="discovery-card-name">${d.name}</div>
+        `;
+        card.onclick = () => {
+            document.querySelectorAll('.discovery-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            renderMissionChart(d.id, d.name, color);
+        };
+        discoveryCardsScroller.appendChild(card);
     });
     
+    // Default chart: Total
+    renderMissionChart('total', 'Total Ecosystem', '#00e5ff');
+
     // 2. Discovery Sonar Map
     discoveryMapEl.innerHTML = '';
     discoveryLog.forEach(d => {
+        const fishCfg = fishConfigs.find(f => f.id === d.id);
+        const coralCfg = coralMetadata.find(c => c.id === d.id);
+        const color = fishCfg ? `#${fishCfg.color.toString(16).padStart(6, '0')}` : (coralCfg ? coralCfg.color : '#00e5ff');
+
         const marker = document.createElement('div');
         marker.className = 'map-marker';
-        // Map Three.js coords (x: -40..40, z: -70..70) to map percentage
         const left = ((d.x + 40) / 80) * 100;
         const top = ((d.z + 70) / 140) * 100;
         marker.style.left = `${left}%`;
         marker.style.top = `${top}%`;
+        marker.style.backgroundColor = color;
+        marker.style.boxShadow = `0 0 10px ${color}`;
         marker.title = `${d.name} (${d.year})`;
         discoveryMapEl.appendChild(marker);
-    });
-    
-    // 3. Discovery List
-    discoveryListEl.innerHTML = '';
-    discoveryLog.forEach(d => {
-        const item = document.createElement('div');
-        item.className = 'discovery-item';
-        item.innerHTML = `
-            <div class="discovery-name">${d.name}</div>
-            <div class="discovery-info">
-                YEAR: ${d.year}<br>
-                POPULATION WHEN FOUND: ${d.count}
-            </div>
-        `;
-        discoveryListEl.appendChild(item);
     });
 }
 
@@ -437,19 +526,17 @@ function updateYear(year: number) {
     syncPopulations(year);
 
     // Narrative Warnings
-    const warning = warnings.find(w => w.year === year);
-    if (warning) {
+    const currentYearWarnings = warnings.filter(w => w.year === year);
+    currentYearWarnings.forEach((warning, idx) => {
         const isCritical = warning.message.includes('CRITICAL') || warning.message.includes('FAILURE');
         const isWarning = warning.message.includes('WARNING');
+        const isSystemFailure = warning.message.includes('SYSTEM FAILURE');
         
-        // Show big red blurb for all warnings now, but more intense for critical
-        warningText.innerText = warning.message;
-        warningBanner.classList.add('active');
-        
-        const type = isCritical ? 'critical' : (isWarning ? 'warning' : 'info');
-        addChatMessage(warning.message, type);
-
-        if (isCritical) {
+        // Show big red blurb ONLY for system failure now (less in your face)
+        if (isSystemFailure) {
+            warningText.innerText = warning.message;
+            warningBanner.classList.add('active');
+            
             // Screen shake effect
             const originalPos = camera.position.clone();
             const shake = { t: 0 };
@@ -459,12 +546,19 @@ function updateYear(year: number) {
             }).onComplete(() => {
                 camera.position.copy(originalPos);
             }).start();
-        }
 
+            setTimeout(() => {
+                warningBanner.classList.remove('active');
+            }, 8000);
+        }
+        
+        // All warnings go to chat
+        const type = isCritical ? 'critical' : (isWarning ? 'warning' : 'info');
+        // Small staggered delay for multiple messages
         setTimeout(() => {
-            warningBanner.classList.remove('active');
-        }, 8000);
-    }
+            addChatMessage(warning.message, type);
+        }, idx * 800);
+    });
 
     const greyColor = new THREE.Color(0xcccccc);
     if (assets && assets.coralsGroup) {
@@ -580,6 +674,11 @@ yearSlider.addEventListener('input', (e) => updateYear(parseInt((e.target as HTM
 popupClose.addEventListener('click', (e) => { e.stopPropagation(); closeFishPopup(); });
 fishPopup.addEventListener('click', (e) => e.stopPropagation());
 bingoOverlay.addEventListener('click', () => toggleBingoBook());
+restartBtn.addEventListener('click', () => {
+    localStorage.removeItem('discoveryLog');
+    localStorage.removeItem('discoveredSpecies');
+    window.location.reload();
+});
 
 window.addEventListener('mousemove', (event) => {
     if (!controls.isLocked) {
@@ -611,6 +710,11 @@ window.addEventListener('pointerdown', (event) => {
         while (obj.parent && obj.userData.type !== 'coral') obj = obj.parent;
         const data = obj.userData;
         if (data.type === 'coral') {
+            const isBleached = data.bleach_year !== null && currentYear >= data.bleach_year;
+            if (isBleached) {
+                addChatMessage("SENSORS OFFLINE: SPECIMEN UNRESPONSIVE (BLEACHED)", "warning");
+                return;
+            }
             showPopup(data.id, data.name.toUpperCase(), data.desc);
             return;
         }
@@ -632,7 +736,15 @@ window.addEventListener('pointerdown', (event) => {
 
     if (targetId !== -1) {
         const config = fishConfigs.find(c => c.id === targetSpecies);
-        if (config) showPopup(config.id, (config.name || targetSpecies).toUpperCase(), config.desc || '');
+        if (config) {
+            const currentPop = populations.find(p => p.year === currentYear);
+            const isExtinct = currentPop ? (currentPop.counts[config.id] || 0) <= 0 : false;
+            if (isExtinct) {
+                addChatMessage("SENSORS OFFLINE: NO VITAL SIGNS DETECTED (EXTINCT)", "warning");
+                return;
+            }
+            showPopup(config.id, (config.name || targetSpecies).toUpperCase(), config.desc || '');
+        }
     }
 });
 

@@ -36,12 +36,17 @@ def generate_warnings():
     # Calculate totals and track specific species drops
     prev_total = None
     prev_counts = {}
+    initial_counts = {}
+    reported_extinct = set()
     
     for entry in sorted(populations, key=lambda x: x['year']):
         year = entry['year']
         counts = entry['counts']
         total = sum(counts.values())
         
+        if not initial_counts:
+            initial_counts = counts.copy()
+            
         if prev_total is not None:
             # Significant overall drop
             if total < prev_total * 0.7:
@@ -51,15 +56,25 @@ def generate_warnings():
                 })
             
             # Specific species crashes
-            for species_id, count in prev_counts.items():
-                if species_id in counts:
-                    new_count = counts[species_id]
-                    if new_count < count * 0.3 and count > 50: # Only report if it was significant before
-                        name = fish_names.get(species_id, species_id).upper()
-                        warnings.append({
-                            "year": year,
-                            "message": f"CRITICAL: {name} population has crashed. Habitat loss is likely the cause."
-                        })
+            for species_id, count in counts.items():
+                prev = prev_counts.get(species_id, 0)
+                name = fish_names.get(species_id, species_id).upper()
+                
+                # Sudden crash
+                if count < prev * 0.3 and prev > 50:
+                    warnings.append({
+                        "year": year,
+                        "message": f"WARNING: {name} population has crashed."
+                    })
+                
+                # Close to extinction (under 15% of initial)
+                init_count = initial_counts.get(species_id, 0)
+                if init_count > 10 and count < init_count * 0.15 and species_id not in reported_extinct:
+                    warnings.append({
+                        "year": year,
+                        "message": f"CRITICAL: {name} is close to extinction!"
+                    })
+                    reported_extinct.add(species_id)
         
         prev_total = total
         prev_counts = counts
@@ -71,34 +86,13 @@ def generate_warnings():
     if not any(w['year'] == 2026 for w in warnings):
         warnings.append({"year": 2026, "message": "SYSTEM FAILURE: Ecosystem collapse imminent. Eco-vitality at critical levels."})
 
-    # Sort and remove duplicates (keep most severe if multiple for same year)
+    # Sort
     warnings.sort(key=lambda x: (x['year'], "CRITICAL" not in x['message']))
-    
-    # Deduplicate years - keep only the most important warning per year
-    final_warnings = []
-    seen_years = {}
-    for w in warnings:
-        year = w['year']
-        if year not in seen_years:
-            final_warnings.append(w)
-            seen_years[year] = len(final_warnings) - 1
-        else:
-            idx = seen_years[year]
-            existing_msg = final_warnings[idx]['message']
-            new_msg = w['message']
-            
-            # If both are critical, merge them cleanly
-            if "CRITICAL" in existing_msg and "CRITICAL" in new_msg:
-                # Remove the "CRITICAL: " prefix from the new message
-                cleaned_new = new_msg.replace("CRITICAL: ", "")
-                final_warnings[idx]['message'] += f" ALSO: {cleaned_new}"
-            else:
-                final_warnings[idx]['message'] += f" | {new_msg}"
 
     with open('warnings.json', 'w') as f:
-        json.dump(final_warnings, f, indent=2)
+        json.dump(warnings, f, indent=2)
     
-    print(f"✅ warnings.json generated with {len(final_warnings)} entries.")
+    print(f"✅ warnings.json generated with {len(warnings)} entries.")
 
 if __name__ == "__main__":
     generate_warnings()

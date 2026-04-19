@@ -2,7 +2,7 @@
   {
     "id": "antipathes",
     "name": "Black Coral",
-    "color": "#479e17",
+    "color": "#cc5097",
     "bleach_year": 2021,
     "proportion": 0.0997,
     "desc": "These deep-water organisms possess a distinct dark, thorny skeleton often used for jewelry."
@@ -10,7 +10,7 @@
   {
     "id": "balticina",
     "name": "Sea Whip Pen",
-    "color": "#56e4d0",
+    "color": "#cc4815",
     "bleach_year": 2025,
     "proportion": 0.0992,
     "desc": "A genus of slender, whip-like sea pens that inhabit soft muddy bottoms in deep-sea environments."
@@ -18,7 +18,7 @@
   {
     "id": "eugorgia",
     "name": "Bright Sea Fan",
-    "color": "#b5a73a",
+    "color": "#565921",
     "bleach_year": 2025,
     "proportion": 0.1299,
     "desc": "Vibrant sea fans characterized by intricate, colorful branching patterns often found in tropical and subtropical reefs."
@@ -26,7 +26,7 @@
   {
     "id": "leptogorgia",
     "name": "Sea Whip",
-    "color": "#956bcb",
+    "color": "#ba538f",
     "bleach_year": null,
     "proportion": 0.0905,
     "desc": "These gorgonians have flexible, slender branches that sway with the ocean currents."
@@ -34,7 +34,7 @@
   {
     "id": "octocorallia",
     "name": "Soft Coral",
-    "color": "#c8d909",
+    "color": "#453378",
     "bleach_year": 2025,
     "proportion": 0.0977,
     "desc": "A broad subclass of corals (including soft corals and sea fans) defined by their eight-fold radial symmetry."
@@ -42,7 +42,7 @@
   {
     "id": "paragorgia",
     "name": "Bubblegum Coral",
-    "color": "#00336a",
+    "color": "#f2e8cd",
     "bleach_year": 2021,
     "proportion": 0.0836,
     "desc": "Known for its bulbous, colorful tips; it forms large, tree-like structures in the deep sea."
@@ -50,7 +50,7 @@
   {
     "id": "pennatuloidea",
     "name": "Sea Pen",
-    "color": "#70fdc9",
+    "color": "#78eb59",
     "bleach_year": null,
     "proportion": 0.1323,
     "desc": "A group of colonial cnidarians, which anchor themselves into soft sediment using a fleshy bulb."
@@ -58,7 +58,7 @@
   {
     "id": "plumarella",
     "name": "Feather Coral",
-    "color": "#154a27",
+    "color": "#c1e502",
     "bleach_year": 2025,
     "proportion": 0.1089,
     "desc": "Delicate, fan-shaped gorgonians with fine, feathery branches typically found in deep, cold waters."
@@ -66,7 +66,7 @@
   {
     "id": "ptilosarcus",
     "name": "Fleshy Sea Pen",
-    "color": "#1c600a",
+    "color": "#65da7c",
     "bleach_year": null,
     "proportion": 0.0906,
     "desc": "These orange-hued organisms resemble large, stout feathers."
@@ -74,7 +74,7 @@
   {
     "id": "stylatula",
     "name": "Needle Sea Pen",
-    "color": "#6c6873",
+    "color": "#6bc095",
     "bleach_year": null,
     "proportion": 0.0677,
     "desc": "Very slender, needle-like sea pens that can retract into the sand when disturbed by predators or strong flows."
