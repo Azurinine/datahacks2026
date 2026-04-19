@@ -247,3 +247,42 @@ input[type=range]::-webkit-slider-thumb {
     margin-top: -6px;
     box-shadow: 0 0 10px rgba(0, 255, 150, 0.5);
 }
+
+/* Fish Popup */
+#fish-popup {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 320px;
+    display: none;
+    z-index: 1000;
+    text-align: center;
+    border: 2px solid #00ffaa;
+}
+
+#fish-popup h2 {
+    margin: 10px 0 5px 0;
+    font-size: 28px;
+    color: #fff;
+    letter-spacing: 2px;
+}
+
+#fish-popup p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #aaffdd;
+    margin: 0;
+}
+
+#popup-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #ff5555;
+    transition: color 0.3s;
+}
+
+#popup-close:hover { color: #fff; }
