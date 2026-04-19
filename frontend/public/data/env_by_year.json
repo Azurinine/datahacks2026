@@ -1,5 +1,12 @@
 [
   {
+    "year": 2013,
+    "avg_temp": 10.5,
+    "avg_ph": 8.0,
+    "vitality": 1.0,
+    "ph_source": "measured"
+  },
+  {
     "year": 2014,
     "avg_temp": 11.6601,
     "avg_ph": 7.9727,

@@ -28,9 +28,9 @@ interface Discovery {
 // 1. GLOBAL STATE & ENGINE SETUP
 // ==========================================
 const scene = new THREE.Scene();
-const waterSurfaceColor = new THREE.Color(0x0055aa); // Rich Royal Blue
-const waterDeepColor = new THREE.Color(0x001133);    // Deep Ultramarine Navy
-scene.background = new THREE.Color(0x001133); 
+const waterSurfaceColor = new THREE.Color(0x44aaff); // Bright Azure
+const waterDeepColor = new THREE.Color(0x003377);    // Clear Deep Blue
+scene.background = new THREE.Color(0x003377); 
 scene.fog = new THREE.FogExp2(waterSurfaceColor, 0.012);
 
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
@@ -65,7 +65,7 @@ const blurPass = new ShaderPass(RadialBlurShader);
 composer.addPass(blurPass);
 
 // Lighting
-const ambientLight = new THREE.AmbientLight(0x1a3a5e, 0.2); 
+const ambientLight = new THREE.AmbientLight(0x2a5a8e, 0.25); 
 scene.add(ambientLight);
 const headlight = new THREE.SpotLight(0xffffff, 50, 80, Math.PI / 6, 0.1, 2);
 headlight.position.set(0, 0, 0);
@@ -150,7 +150,7 @@ let lastUIActionTime = 0; // Cooldown for UI toggles
 const UI_COOLDOWN = 300; 
 
 // Narrative State
-let currentYear = 2014;
+let currentYear = 2013;
 let timeInYear = 0;
 const YEAR_DURATION = 15; // 15 seconds per year for faster progression
 let warnings: { year: number, message: string }[] = [];
@@ -515,7 +515,7 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
         data = speciesHistory.map(v => (v / initialCount) * 100);
     }
 
-    activeSpeciesTitle.innerText = `${title.toUpperCase()} TREND (2014-2026)`;
+    activeSpeciesTitle.innerText = `${title.toUpperCase()} TREND (2013-2026)`;
     
     // Find discovery point for this species if it exists
     const discovery = discoveryLog.find(d => d.id === speciesId);
@@ -543,10 +543,9 @@ function renderMissionChart(speciesId: string | 'total', title: string, color: s
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                y: { 
-                    title: { display: true, text: '% OF 2014 POPULATION', color: '#88bbcc', font: { family: 'Share Tech Mono', size: 10 } },
-                    beginAtZero: true, 
-                    max: 120,
+                y: {
+                    title: { display: true, text: '% OF 2013 POPULATION', color: '#88bbcc', font: { family: 'Share Tech Mono', size: 10 } },
+                    beginAtZero: true,                    max: 120,
                     grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
                     ticks: { color: '#88bbcc', font: { family: 'Share Tech Mono' } } 
                 },
@@ -721,7 +720,15 @@ function syncPopulations(year: number) {
     });
 }
 
-let lastWarningYear = -1;
+function triggerSensorAnim(el: HTMLElement) {
+    el.classList.remove('sensor-pulse');
+    void el.offsetWidth; // Trigger reflow
+    el.classList.add('sensor-pulse');
+}
+
+let lastIsTempCritical = false;
+let lastIsPHCritical = false;
+
 function applyDataToWorld(pH: number, temp: number) {
     currentGlobalPH = pH;
     let vitality = Math.max(0, Math.min(1, (pH - 7.6) / 0.5)); 
@@ -729,6 +736,9 @@ function applyDataToWorld(pH: number, temp: number) {
     const phEl = document.getElementById('stat-ph')!;
     const tempEl = document.getElementById('stat-temp')!;
     const vitEl = document.getElementById('stat-vit')!;
+    
+    const rowPh = document.getElementById('row-ph')!;
+    const rowTemp = document.getElementById('row-temp')!;
 
     phEl.innerText = pH.toFixed(2);
     tempEl.innerText = temp.toFixed(1) + " °C";
@@ -738,32 +748,46 @@ function applyDataToWorld(pH: number, temp: number) {
     // Intense visual effects as vitality drops
     if (vitality < 0.3) {
         blurPass.uniforms.strength.value = 0.15 + (0.3 - vitality) * 2;
+        if (!vitEl.classList.contains('warning')) {
+            triggerSensorAnim(document.getElementById('row-vit')!);
+        }
     } else {
         blurPass.uniforms.strength.value = 0.15;
     }
 
-    // Thresholds adjusted for ~1/3 occurrences
-    const isTempCritical = temp > 11.58; // Hits 2014, 2015, 2016
-    const isPHCritical = pH < 7.946;    // Hits 2024, 2025, 2026
+    // Thresholds
+    const isTempCritical = temp > 11.58; 
+    const isPHCritical = pH < 7.946;    
 
-    // Highlight numbers in red
-    phEl.classList.toggle('warning', isPHCritical);
-    tempEl.classList.toggle('warning', isTempCritical);
-
-    // Temperature Red Tint
-    if (isTempCritical) {
+    // SHOW, DON'T TELL: Trigger animations on entire rows
+    if (isTempCritical && !lastIsTempCritical) {
+        triggerSensorAnim(rowTemp);
+        // Temporary intense red flash
+        tempTint.style.transition = 'opacity 0.2s ease-out';
+        tempTint.style.opacity = '0.7';
+        setTimeout(() => {
+            tempTint.style.transition = 'opacity 2s ease-in-out';
+            const intensity = Math.min(1, (temp - 11.58) * 5);
+            tempTint.style.opacity = (intensity * 0.4).toString();
+        }, 300);
+    } else if (isTempCritical) {
         const intensity = Math.min(1, (temp - 11.58) * 5);
         tempTint.style.opacity = (intensity * 0.4).toString();
     } else {
         tempTint.style.opacity = '0';
     }
 
-    // Warning Controller
-    if (currentYear !== lastWarningYear && (isTempCritical || isPHCritical)) {
-        if (isTempCritical) addChatMessage("SYSTEM ALERT: THERMAL STRESS DETECTED", "critical");
-        if (isPHCritical) addChatMessage("SYSTEM ALERT: pH CRITICAL - VISIBILITY LOWERING", "critical");
-        lastWarningYear = currentYear;
+    if (isPHCritical && !lastIsPHCritical) {
+        triggerSensorAnim(rowPh);
     }
+
+    // Highlight numbers in red
+    phEl.classList.toggle('warning', isPHCritical);
+    tempEl.classList.toggle('warning', isTempCritical);
+    vitEl.classList.toggle('warning', vitality < 0.3);
+
+    lastIsTempCritical = isTempCritical;
+    lastIsPHCritical = isPHCritical;
 }
 
 function addChatMessage(msg: string, type: 'info' | 'warning' | 'critical' = 'info') {
@@ -797,8 +821,8 @@ function updateYear(year: number) {
     yearValue.innerText = year.toString();
     
     const env = envByYear[year];
-    const pH = env ? env.avg_ph : 8.1 - (year - 2014) * 0.04;
-    const temp = env ? env.avg_temp : 10.0 + (year - 2014) * 0.15;
+    const pH = env ? env.avg_ph : 8.1 - (year - 2013) * 0.04;
+    const temp = env ? env.avg_temp : 10.0 + (year - 2013) * 0.15;
     
     applyDataToWorld(pH, temp);
     syncPopulations(year);
@@ -1027,7 +1051,7 @@ document.addEventListener('keydown', (event) => {
         case 'ArrowLeft': moveState.fastForward = true; break;
     }
     const curYear = parseInt(yearSlider.value);
-    if (event.key === '[' && curYear > 2014) updateYear(curYear - 1);
+    if (event.key === '[' && curYear > 2013) updateYear(curYear - 1);
     if (event.key === ']' && curYear < 2026) updateYear(curYear + 1);
 });
 
@@ -1151,7 +1175,7 @@ function animate() {
         scene.fog.color.copy(currentWaterColor);
         scene.fog.density = (0.05 - (1.0 - depthLerp) * 0.04) + phMurkiness;
     }
-    ambientLight.intensity = 0.2 + depthLerp * 0.15; 
+    ambientLight.intensity = 0.25 + depthLerp * 0.15; 
 
     if (controls.isLocked === true) {
         const oldPos = camera.position.clone();
@@ -1201,7 +1225,7 @@ function animate() {
             }
         }
         // Update a mini-progress bar for the current year
-        const totalProgress = ((currentYear - 2014) + (timeInYear / YEAR_DURATION)) / (2026 - 2014) * 100;
+        const totalProgress = ((currentYear - 2013) + (timeInYear / YEAR_DURATION)) / (2026 - 2013) * 100;
         if (yearProgressFill) yearProgressFill.style.width = `${totalProgress}%`;
 
         TWEEN.update();
@@ -1284,7 +1308,7 @@ async function init() {
     scene.add(assets.environmentGroup); 
     scene.add(assets.seaweedsGroup);
 
-    updateYear(2014);
+    updateYear(2013);
     addChatMessage("SUBMERSIBLE SYSTEMS ONLINE", "info");
     addChatMessage("ENVIRONMENTAL MONITORING ACTIVE", "info");
 
