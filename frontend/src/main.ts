@@ -1138,8 +1138,12 @@ function updateYear(year: number) {
                 
                 if (isBleached) {
                     mat.color.copy(greyColor);
+                    mat.emissive.set(0x000000);
+                    mat.emissiveIntensity = 0;
                 } else {
                     mat.color.copy(data.originalColor);
+                    mat.emissive.copy(data.originalColor);
+                    mat.emissiveIntensity = 0.3;
                 }
                 
                 // Track state for animations if needed, but glow is removed
